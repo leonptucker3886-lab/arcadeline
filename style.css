@@ -26,3 +26,14 @@ h3{margin:22px 0 8px}.lb{list-style:none;counter-reset:r;background:var(--pn);bo
 .lb li{counter-increment:r;display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--ln);font-size:15px}.lb li:last-child{border:0}.lb li:before{content:counter(r);width:28px;color:var(--mu)}.lb li span{flex:1}.lb li.me{color:var(--ac2);font-weight:700}
 footer{padding:20px 18px;text-align:center}
 @media(hover:hover) and (pointer:fine){.pad{display:none}}
+
+.av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--pn);border:2px solid var(--ln);font-size:16px;vertical-align:middle;flex:none}
+.av.big{width:84px;height:84px;font-size:44px;border-width:3px}.av.rb{border-color:transparent;background:linear-gradient(var(--pn),var(--pn)) padding-box,conic-gradient(#ff3dcb,#ffd23d,#9dff3d,#3df5ff,#ff3dcb) border-box}
+.wh{display:inline-flex;align-items:center;gap:8px;cursor:pointer}.tk{font-size:13px;color:#ffd23d;font-weight:700}
+.phead{margin:16px 0}.pcard{display:flex;gap:20px;align-items:center;flex-wrap:wrap}.pinfo{flex:1;min-width:220px}.pinfo h2{margin:0}
+.lvl{display:flex;align-items:center;gap:10px;margin:10px 0}.bar{flex:1;height:10px;background:var(--bg);border:1px solid var(--ln);border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#ff3dcb,#3df5ff)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.chip{background:var(--bg);border:1px solid var(--ln);border-radius:20px;padding:6px 12px;font-size:14px}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}.bd{background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:12px;text-align:center;font-size:13px}.bd b{display:block;font-size:28px}.bd.off{opacity:.35;filter:grayscale(1)}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px}.it{background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:12px;text-align:center;font-size:14px}.it .pv{font-size:30px;height:40px;display:flex;align-items:center;justify-content:center}.it button{width:100%;margin-top:8px;padding:8px}.it.eq{border-color:var(--ac2)}
+.lb li .ti{font-size:11px;color:var(--mu);margin-left:6px}.lb li .lv{font-size:11px;color:var(--mu);margin-right:8px}
+.rw{color:#ffd23d;font-weight:700}

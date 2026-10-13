@@ -7,7 +7,7 @@
 <header><div class="wrap bar"><a class="logo" href="#" onclick="go('home');return false">Arcadeline</a><div id="who"></div></div></header>
 <main class="wrap">
 <section id="v-home">
- <div class="hero"><h1>Classic arcade. <em>Original games.</em></h1><p>Seven games, five brand-new takes on the classics. Free account, global leaderboards, personal bests.</p></div>
+ <div class="hero"><h1>Classic arcade. <em>Original games.</em></h1><p>Seven games, five brand-new takes on the classics. Free account, global leaderboards, personal bests — plus XP levels, badges and tokens to spend on profile rewards.</p></div>
  <div id="games" class="grid"></div>
 </section>
 <section id="v-play" hidden>
@@ -18,6 +18,14 @@
  </div>
  <p class="hint" id="hint"></p>
  <h3>Leaderboard — top 20</h3><ol id="lb" class="lb"></ol>
+</section>
+<section id="v-profile" hidden>
+ <div class="phead"><button class="ghost" onclick="go('home')">← Games</button></div>
+ <div class="card pcard"><div id="pav" class="av big"></div><div class="pinfo"><h2 id="pname"></h2><div id="ptitle" class="small"></div>
+ <div class="lvl"><span id="plvl"></span><div class="bar"><i id="pbar"></i></div><span id="pxp" class="small"></span></div>
+ <div class="chips"><span class="chip">🪙 <b id="ptok">0</b> tokens</span><span class="chip">🔥 <b id="pstreak">0</b>-day streak</span><button id="dbtn" onclick="claimDaily()">Claim daily bonus</button></div><p class="msg" id="pmsg2"></p></div></div>
+ <h3>Badges</h3><div id="badges" class="badges"></div>
+ <h3>Reward shop</h3><p class="small">Earn tokens by saving scores (bigger scores and personal bests pay more), claiming your daily bonus and levelling up.</p><div id="shop"></div>
 </section>
 <section id="v-auth" hidden>
  <div class="card narrow"><h2 id="atitle">Sign in to save scores</h2>

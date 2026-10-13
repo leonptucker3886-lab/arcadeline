@@ -6,13 +6,13 @@ const GAMES=[
  {id:'rocks',img:'https://www.leonlink.net/img/cards/drift.jpg',ic:'☄️',name:'Drift',desc:'Pilot a lone ship through a field of splitting rocks.',hint:'Left/right rotate, up thrust, space/● fire.'},
  {id:'invaders',img:'https://www.leonlink.net/img/cards/skylinesiege.jpg',ic:'👾',name:'Skyline Siege',desc:'Hold the line against descending waves from above.',hint:'Left/right or drag to move. Space/● fires.'},
  {id:'blocks',img:'https://www.leonlink.net/img/cards/stackline.jpg',ic:'🟪',name:'Stackline',desc:'Rotate, drop and clear lines before the well fills.',hint:'Left/right move, up rotate, down soft drop, ● hard drop.'}];
-let user=null,nick=null,mode='in',cur=null,after=null;
-function go(v){for(const s of ['home','play','auth','nick'])$('v-'+s).hidden=s!==v;window.scrollTo(0,0)}
-function renderWho(){$('who').innerHTML=user?`<span class="small">${esc(nick||user.email)}</span> <button class="ghost" onclick="signOut()">Sign out</button>`:`<button onclick="go('auth')">Sign in</button>`}
+let P=null,ITEMS=[],BADGES=[],user=null,nick=null,mode='in',cur=null,after=null;
+function go(v){for(const s of ['home','play','auth','nick','profile'])$('v-'+s).hidden=s!==v;window.scrollTo(0,0)}
+function renderWho(){$('who').innerHTML=user?`<span class="wh" onclick="openProfile()">${P?avHtml(P.av,P.fr):''}<span class="small">${esc(nick||user.email)}</span>${P?`<span class="tk">🪙${P.tokens}</span>`:''}</span> <button class="ghost" onclick="signOut()">Sign out</button>`:`<button onclick="go('auth')">Sign in</button>`}
 const MORE=[{img:'https://www.leonlink.net/img/cards/chimneyrun.jpg',ic:'🏠',name:'Chimney Run',desc:'Run the rooftops, stomp soot gremlins and warp through chimneys.',u:'https://www.leonlink.net/chimney-run.html'},{ic:'🗞️',img:'https://www.leonlink.net/img/cards/paperroute.jpg',name:'Paper Route',desc:'Neon paper-boy run: hit glowing porches, dodge cars and dogs.',u:'https://www.leonlink.net/paper-route.html'}];
 function renderHome(){const c=(g,tag)=>`<div class="pim"><img src="${g.img}" alt="${esc(g.name)}" loading="lazy"></div><div class="pbd"><h3>${g.name}</h3><p>${g.desc}</p><span class="go">${tag}</span></div>`;$('games').innerHTML=GAMES.map(g=>`<a class="gc" href="#${g.id}" onclick="openGame('${g.id}');return false">${c(g,'Play \u00b7 Leaderboard \u2192')}</a>`).join('')+MORE.map(g=>`<a class="gc" href="${g.u}">${c(g,'Play on LeonLink \u2192')}</a>`).join('')}
 async function loadUser(){const {data}=await sb.auth.getSession();user=data.session?.user||null;nick=null;
- if(user){const {data:p}=await sb.from('arc_profiles').select('nickname').eq('id',user.id).maybeSingle();nick=p?.nickname||null}renderWho()}
+ if(user){const {data:p}=await sb.from('arc_profiles').select('*').eq('id',user.id).maybeSingle();nick=p?.nickname||null;P=p?prof(p):null}else P=null;renderWho()}
 function flip(){mode=mode==='in'?'up':'in';$('atitle').textContent=mode==='in'?'Sign in to save scores':'Create a free account';$('abtn').textContent=mode==='in'?'Sign in':'Create account';$('aflip').textContent=mode==='in'?'New here? Create a free account':'Have an account? Sign in';$('amsg').textContent=''}
 async function auth(){const email=$('em').value.trim(),password=$('pw').value;$('amsg').textContent='…';
  const r=mode==='in'?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin}});
@@ -23,8 +23,8 @@ async function saveNick(){const n=$('nick').value.trim();if(!/^[A-Za-z0-9_]{3,16
  const {error}=await sb.from('arc_profiles').upsert({id:user.id,nickname:n});if(error){$('nmsg').textContent=error.code==='23505'?'That name is taken.':error.message;return}
  nick=n;renderWho();if(after)after();else go('home')}
 async function signOut(){await sb.auth.signOut();user=null;nick=null;renderWho();go('home')}
-async function loadLB(g){const {data}=await sb.from('arc_leaderboard').select('nickname,best').eq('game',g).order('best',{ascending:false}).limit(20);
- $('lb').innerHTML=(data||[]).map(r=>`<li class="${r.nickname===nick?'me':''}"><span>${esc(r.nickname)}</span><b>${r.best}</b></li>`).join('')||'<li class="small">No scores yet. Be the first.</li>';
+async function loadLB(g){const {data}=await sb.from('arc_leaderboard').select('nickname,best,lvl,av,fr,co,ti').eq('game',g).order('best',{ascending:false}).limit(20);
+ $('lb').innerHTML=(data||[]).map(r=>`<li class="${r.nickname===nick?'me':''}"><span><span class="lv">Lv${r.lvl}</span>${avHtml(r.av||'🕹️',r.fr)} <span style="${r.co?'color:'+r.co:''}">${esc(r.nickname)}</span>${r.ti?`<span class="ti">${esc(r.ti)}</span>`:''}</span><b>${r.best}</b></li>`).join('')||'<li class="small">No scores yet. Be the first.</li>';
  if(user){const {data:b}=await sb.from('arc_scores').select('score').eq('game',g).eq('user_id',user.id).order('score',{ascending:false}).limit(1);$('best').textContent=b?.[0]?.score??'–'}else $('best').textContent='–'}
 function openGame(id){cur=GAMES.find(g=>g.id===id);if(!cur)return;history.replaceState(null,'','#'+id);$('gtitle').textContent=cur.name;$('hint').textContent=cur.hint;$('score').textContent=0;go('play');loadLB(id);showStart()}
 function overlay(html){const o=$('overlay');o.innerHTML=html;o.hidden=!html}
@@ -35,6 +35,27 @@ async function onOver(score,dur){let msg='';
  else if(score>0&&!nick){msg=`<button class="ghost" onclick="after=()=>{go('play');post(${score},${dur})};go('nick')">Pick a name & save</button>`}
  overlay(`<h2>Game over</h2><p>Score <b>${score}</b></p><p id="pmsg" class="small"></p>${msg}<button onclick="begin()">Play again</button>`);
  if(score>0&&user&&nick)post(score,dur)}
-async function post(score,dur){const {error}=await sb.rpc('arc_submit_score',{p_game:cur.id,p_score:score,p_duration:Math.max(3,Math.round(dur))});
- const m=$('pmsg');if(m)m.textContent=error?('Not saved: '+error.message):'Score saved ✓';if(!error)loadLB(cur.id)}
+async function post(score,dur){const {data:rw,error}=await sb.rpc('arc_submit_score',{p_game:cur.id,p_score:score,p_duration:Math.max(3,Math.round(dur))});
+ const m=$('pmsg');if(m)m.innerHTML=error?('Not saved: '+esc(error.message)):`Score saved ✓ <span class="rw">+${rw.tokens} 🪙 · +${rw.xp} XP</span>${rw.pb?' · New personal best!':''}${rw.levelup?` · Level up! You're level ${rw.level}`:''}${(rw.badges||[]).map(b=>`<br>Badge unlocked: ${b.icon} ${esc(b.name)}`).join('')}`;if(!error){loadLB(cur.id);loadUser()}}
 sb.auth.onAuthStateChange(()=>{});renderHome();loadUser();go('home');{const h=location.hash.slice(1);if(GAMES.some(g=>g.id===h))setTimeout(()=>openGame(h),0)}
+
+function prof(p){const it=id=>ITEMS.find(i=>i.id===id);return{...p,av:it(p.avatar)?.val||'🕹️',fr:it(p.frame)?.val,co:it(p.color)?.val,ti:it(p.title)?.val,lvl:Math.floor(Math.sqrt(p.xp/50))+1}}
+function avHtml(v,f){return `<span class="av${f==='rainbow'?' rb':''}" style="${f&&f!=='rainbow'?'border-color:'+f+';box-shadow:0 0 8px '+f:''}">${esc(v)}</span>`}
+async function loadCat(){const [i,b]=await Promise.all([sb.from('arc_items').select('*').order('sort'),sb.from('arc_badges').select('*').order('sort')]);ITEMS=i.data||[];BADGES=b.data||[]}
+async function openProfile(){if(!user){go('auth');return}if(!nick){go('nick');return}await loadUser();go('profile');renderProfile()}
+async function renderProfile(){const p=P;if(!p)return;const lv=p.lvl,lo=50*(lv-1)**2,hi=50*lv**2;
+ $('pav').outerHTML=`<div id="pav">${avHtml(p.av,p.fr).replace('class="av','class="av big')}</div>`;
+ $('pname').innerHTML=`<span style="${p.co?'color:'+p.co:''}">${esc(p.nickname)}</span>`;$('ptitle').textContent=p.ti||'';
+ $('plvl').textContent='Level '+lv;$('pbar').style.width=Math.round(100*(p.xp-lo)/(hi-lo))+'%';$('pxp').textContent=`${p.xp-lo}/${hi-lo} XP`;
+ $('ptok').textContent=p.tokens;$('pstreak').textContent=p.streak;const today=new Date().toISOString().slice(0,10);$('dbtn').disabled=p.last_daily===today;$('dbtn').textContent=p.last_daily===today?'Daily bonus claimed \u2713':'Claim daily bonus';
+ const [{data:e},{data:o}]=await Promise.all([sb.from('arc_earned').select('badge').eq('user_id',user.id),sb.from('arc_owned').select('item')]);const E=new Set((e||[]).map(x=>x.badge)),O=new Set((o||[]).map(x=>x.item));
+ $('badges').innerHTML=BADGES.map(b=>`<div class="bd ${E.has(b.id)?'':'off'}" title="${esc(b.descr)}"><b>${b.icon}</b>${esc(b.name)}<div class="small">${esc(b.descr)}</div></div>`).join('');
+ const K={avatar:'Avatars',frame:'Frames',color:'Name colours',title:'Titles'},eq={avatar:p.avatar,frame:p.frame,color:p.color,title:p.title};
+ $('shop').innerHTML=Object.keys(K).map(k=>`<h4>${K[k]}</h4><div class="shop">${ITEMS.filter(i=>i.kind===k).map(i=>{const own=i.price===0||O.has(i.id),on=eq[k]===i.id;
+  const pv=k==='avatar'?esc(i.val):k==='frame'?avHtml(p.av,i.val):k==='color'?`<b style="color:${i.val}">${esc(p.nickname)}</b>`:`<span class="small">${esc(i.val)}</span>`;
+  const btn=on?(k==='avatar'?'<button disabled>Equipped</button>':`<button class="ghost" onclick="unequip('${k}')">Unequip</button>`):own?`<button onclick="equip('${i.id}')">Equip</button>`:lv<i.min_level?`<button disabled>Level ${i.min_level}</button>`:`<button ${p.tokens<i.price?'disabled':''} onclick="buy('${i.id}')">\U0001FA99 ${i.price}</button>`;
+  return `<div class="it ${on?'eq':''}"><div class="pv">${pv}</div>${esc(i.name)}${btn}</div>`}).join('')}</div>`).join('')}
+async function act(fn,args,ok){const {data,error}=await sb.rpc(fn,args);$('pmsg2').textContent=error?error.message:(typeof ok==='function'?ok(data):ok);await loadUser();renderProfile()}
+const buy=id=>act('arc_buy',{p_item:id},'Unlocked! Tap Equip to wear it.'),equip=id=>act('arc_equip',{p_item:id},'Equipped.'),unequip=k=>act('arc_unequip',{p_kind:k},'Removed.');
+const claimDaily=()=>act('arc_daily',{},d=>d.claimed?`+${d.tokens} tokens \u00b7 ${d.streak}-day streak`:'Already claimed today.');
+loadCat().then(loadUser);
