@@ -5,7 +5,8 @@ const GAMES=[
  {id:'bricks',img:'https://www.leonlink.net/img/cards/brickfall.jpg',ic:'🧱',name:'Brickfall',desc:'Bounce the orb, smash every brick, keep the paddle alive.',hint:'Left/right or drag to move. Space or ● to launch.'},
  {id:'rocks',img:'https://www.leonlink.net/img/cards/drift.jpg',ic:'☄️',name:'Drift',desc:'Pilot a lone ship through a field of splitting rocks.',hint:'Left/right rotate, up thrust, space/● fire.'},
  {id:'invaders',img:'https://www.leonlink.net/img/cards/skylinesiege.jpg',ic:'👾',name:'Skyline Siege',desc:'Hold the line against descending waves from above.',hint:'Left/right or drag to move. Space/● fires.'},
- {id:'blocks',img:'https://www.leonlink.net/img/cards/stackline.jpg',ic:'🟪',name:'Stackline',desc:'Rotate, drop and clear lines before the well fills.',hint:'Left/right move, up rotate, down soft drop, ● hard drop.'}];
+ {id:'blocks',img:'https://www.leonlink.net/img/cards/stackline.jpg',ic:'🟪',name:'Stackline',desc:'Rotate, drop and clear lines before the well fills.',hint:'Left/right move, up rotate, down soft drop, ● hard drop.'},
+ {id:'boxing',img:'https://www.leonlink.net/img/cards/knockoutqueens.jpg',ic:'🥊',name:'Knockout Queens',desc:'Punch-Out-style boxing: read the tells and KO six women champions.',hint:'◀/▶ dodge · hold ▼ block · ▲ high punch · ● body punch · hold ▼ + ▲ for a Star Punch (earn stars with counters).'}];
 let P=null,ITEMS=[],BADGES=[],user=null,nick=null,mode='in',cur=null,after=null;
 function go(v){for(const s of ['home','play','auth','nick','profile'])$('v-'+s).hidden=s!==v;window.scrollTo(0,0)}
 function renderWho(){$('who').innerHTML=user?`<span class="wh" onclick="openProfile()">${P?avHtml(P.av,P.fr):''}<span class="small">${esc(nick||user.email)}</span>${P?`<span class="tk">🪙${P.tokens}</span>`:''}</span> <button class="ghost" onclick="signOut()">Sign out</button>`:`<button onclick="go('auth')">Sign in</button>`}
