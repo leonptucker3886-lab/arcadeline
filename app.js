@@ -9,7 +9,8 @@ const GAMES=[
 let user=null,nick=null,mode='in',cur=null,after=null;
 function go(v){for(const s of ['home','play','auth','nick'])$('v-'+s).hidden=s!==v;window.scrollTo(0,0)}
 function renderWho(){$('who').innerHTML=user?`<span class="small">${esc(nick||user.email)}</span> <button class="ghost" onclick="signOut()">Sign out</button>`:`<button onclick="go('auth')">Sign in</button>`}
-function renderHome(){$('games').innerHTML=GAMES.map(g=>`<div class="gc" onclick="openGame('${g.id}')"><div class="ic">${g.ic}</div><h3>${g.name}</h3><p>${g.desc}</p></div>`).join('')}
+const MORE=[{ic:'🏠',name:'Chimney Run',desc:'Run the rooftops, stomp soot gremlins and warp through chimneys.',u:'https://www.leonlink.net/chimney-run.html'},{ic:'🗞️',name:'Paper Route',desc:'Neon paper-boy run: hit glowing porches, dodge cars and dogs.',u:'https://www.leonlink.net/paper-route.html'}];
+function renderHome(){const _m=MORE.map(g=>`<a class="gc" style="text-decoration:none;color:inherit" href="${g.u}"><div class="ic">${g.ic}</div><h3>${g.name}</h3><p>${g.desc}</p></a>`).join('');$('games').innerHTML=GAMES.map(g=>`<div class="gc" onclick="openGame('${g.id}')"><div class="ic">${g.ic}</div><h3>${g.name}</h3><p>${g.desc}</p></div>`).join('')+_m}
 async function loadUser(){const {data}=await sb.auth.getSession();user=data.session?.user||null;nick=null;
  if(user){const {data:p}=await sb.from('arc_profiles').select('nickname').eq('id',user.id).maybeSingle();nick=p?.nickname||null}renderWho()}
 function flip(){mode=mode==='in'?'up':'in';$('atitle').textContent=mode==='in'?'Sign in to save scores':'Create a free account';$('abtn').textContent=mode==='in'?'Sign in':'Create account';$('aflip').textContent=mode==='in'?'New here? Create a free account':'Have an account? Sign in';$('amsg').textContent=''}
