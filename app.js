@@ -2,6 +2,7 @@ const sb=supabase.createClient('https://cjtutkvhyzjsgclqvylg.supabase.co','sb_pu
 const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const GAMES=[
  {id:'snake',img:'https://www.leonlink.net/img/cards/serpentine.jpg',ic:'🐍',name:'Serpentine',desc:'Grow the line, eat the dots, never bite yourself.',hint:'Arrows / WASD or swipe to steer.'},
+ {id:'dailysudoku',img:'https://www.leonlink.net/img/cards/sudoku.jpg',ic:'\ud83d\udcc5',name:'Daily Sudoku',desc:'One puzzle for everyone, every day. Build your streak \u2014 three mistakes ends the run.',hint:'Same puzzle all day for every player. Tap a cell then 1-9; N toggles notes.'},
  {id:'bricks',img:'https://www.leonlink.net/img/cards/brickfall.jpg',ic:'🧱',name:'Brickfall',desc:'Bounce the orb, smash every brick, keep the paddle alive.',hint:'Left/right or drag to move. Space or ● to launch.'},
  {id:'rocks',img:'https://www.leonlink.net/img/cards/drift.jpg',ic:'☄️',name:'Drift',desc:'Pilot a lone ship through a field of splitting rocks.',hint:'Left/right rotate, up thrust, space/● fire.'},
  {id:'invaders',img:'https://www.leonlink.net/img/cards/skylinesiege.jpg',ic:'👾',name:'Skyline Siege',desc:'Hold the line against descending waves from above.',hint:'Left/right or drag to move. Space/● fires.'},

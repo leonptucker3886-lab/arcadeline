@@ -661,15 +661,16 @@ return g;
 };
 // Sudoku — ported from sausi-7/games (MIT). Mechanics faithful; code rewritten.
 MAKERS.sudoku=()=>{
+const R=(typeof DAILY_RNG==='function')?DAILY_RNG:rnd;
 // --- puzzle: backtracking fill + hole-digging with unique-solution check ---
-const sh=a=>{for(let i=a.length-1;i>0;i--){const j=(rnd(0,i+1))|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const sh=a=>{for(let i=a.length-1;i>0;i--){const j=(R(0,i+1))|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const ok=(g,r,c,n)=>{for(let i=0;i<9;i++)if(g[r][i]===n||g[i][c]===n)return 0;const br=r-r%3,bc=c-c%3;for(let i=0;i<3;i++)for(let j=0;j<3;j++)if(g[br+i][bc+j]===n)return 0;return 1};
 const SOL=[...Array(9)].map(()=>Array(9).fill(0));
 const fill=g=>{for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){for(const n of sh([1,2,3,4,5,6,7,8,9]))if(ok(g,r,c,n)){g[r][c]=n;if(fill(g))return 1;g[r][c]=0}return 0}return 1};
 fill(SOL);
 const count2=g=>{let n=0;const s=g.map(r=>r.slice());const rec=()=>{if(n>1)return;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!s[r][c]){for(let v=1;v<=9;v++)if(ok(s,r,c,v)){s[r][c]=v;rec();s[r][c]=0}return}n++};rec();return n};
 const PUZ=SOL.map(r=>r.slice());let rem=0,guard=0;
-while(rem<44&&guard++<400){const r=(rnd(0,9))|0,c=(rnd(0,9))|0,t=PUZ[r][c];if(!t)continue;PUZ[r][c]=0;if(count2(PUZ)!==1)PUZ[r][c]=t;else rem++}
+while(rem<44&&guard++<400){const r=(R(0,9))|0,c=(R(0,9))|0,t=PUZ[r][c];if(!t)continue;PUZ[r][c]=0;if(count2(PUZ)!==1)PUZ[r][c]=t;else rem++}
 // --- state ---
 const BX=18,BY=56,CS=36,PY=388,BY2=432;
 const grid=PUZ.map(r=>r.slice()),giv=PUZ.map(r=>r.map(v=>v!==0));
@@ -911,3 +912,113 @@ draw(){clear();
  txt('STREET FOOTBALL',180,H-10,'rgba(255,255,255,.4)',11);
  if(fx>0)txt('GOAL!',180,200,'#fde047',44);}};
 return g;};
+
+/* ===== DAILY CHALLENGE (decision sheet, Days 3-7) ===== */
+// ---------------------------------------------------------------------------
+// Daily Challenge patch — APPEND to games.js (do NOT insert mid-file).
+// Adds: seeded RNG plumbing, MAKERS.dailysudoku, daily streak store, share toast.
+// Requires the minimal seeding hook inside MAKERS.sudoku (see DAILY.md diff):
+//   const R=(typeof DAILY_RNG==='function')?DAILY_RNG:rnd;
+// and the two generation-time rnd() calls switched to R().
+// ---------------------------------------------------------------------------
+
+// Global (file-scope) hook read by the MAKERS.sudoku seeding line above.
+var DAILY_RNG = null;
+
+// --- seeded RNG: FNV-1a date hash -> mulberry32, same (a,b) signature as rnd() ---
+function _hashDate(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)}return h>>>0}
+function _mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+function _mulberryRnd(seed,log){const f=_mulberry32(seed);return function(a,b){const r=f();if(log&&log.length<200000)log.push(r);return a+r*(b-a)}}
+
+// Local date as YYYY-MM-DD (everyone's puzzle is the same calendar day; midnight-local rollover).
+var _todayFn=null;
+function _realToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function _today(){return _todayFn?_todayFn():_realToday()}
+function _yesterday(dateStr){const p=dateStr.split('-').map(Number);const d=new Date(p[0],p[1]-1,p[2]-864e5*0);d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function _pretty(dateStr){const p=dateStr.split('-').map(Number);const d=new Date(p[0],p[1]-1,p[2]);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+
+// --- daily streak store ------------------------------------------------------
+// localStorage 'arcadeline:daily' = {lastDate, streak, best, history:{date:score}}
+var DAILY_KEY='arcadeline:daily';
+function _dailyRead(){try{const s=JSON.parse(localStorage.getItem(DAILY_KEY));return s&&typeof s==='object'?s:{}}catch(e){return{}}}
+function _dailyWrite(s){try{localStorage.setItem(DAILY_KEY,JSON.stringify(s))}catch(e){}}
+function _recordDaily(score,dateStr){
+  dateStr=dateStr||_today();
+  if(typeof localStorage==='undefined')return{};
+  const s=_dailyRead();
+  if(s.lastDate===dateStr)return s;                       // already recorded today: no double count
+  s.streak=(s.lastDate===_yesterday(dateStr))?((s.streak|0)+1):1;
+  s.lastDate=dateStr;
+  s.best=Math.max(s.best|0,score|0);
+  s.history=s.history||{};s.history[dateStr]=score;
+  _dailyWrite(s);return s;
+}
+
+// --- share ------------------------------------------------------------------
+function _shareText(dateStr,score,streak){
+  return 'Daily Sudoku \u2014 '+_pretty(dateStr)+' \u00b7 Score '+score+' \u00b7 \uD83D\uDD25 '+streak+'-day streak \u00b7 Play at arcadeline.leonlink.net';
+}
+function _doShare(text){
+  if(typeof navigator!=='undefined'&&navigator.share){try{navigator.share({text:text}).catch(function(){})}catch(e){}}
+  else if(typeof navigator!=='undefined'&&navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){_dailyToastNote('Copied \u2014 paste it anywhere.')},function(){_dailyToastNote('Copy failed \u2014 long-press to copy.')});
+  } else _dailyToastNote('Copy this: '+text);
+}
+function _dailyToastNote(msg){
+  if(typeof document==='undefined'||!document.createElement||!document.body)return;
+  const n=document.createElement('div');
+  n.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;max-width:92vw;background:#141824;color:#EDEDF5;border:1px solid rgba(251,191,36,.5);border-radius:12px;padding:10px 14px;font:14px system-ui;text-align:center';
+  n.textContent=msg;document.body.appendChild(n);setTimeout(function(){if(n.remove)n.remove()},3500);
+}
+function _dailyToast(dateStr,score,streak){
+  if(typeof document==='undefined'||!document.createElement||!document.body)return;
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;max-width:92vw;background:#141824;color:#EDEDF5;border:1px solid rgba(251,191,36,.6);border-radius:14px;padding:14px 16px;font:15px/1.5 system-ui;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+  const line=document.createElement('div');
+  line.innerHTML='Daily Sudoku \u2014 <b>'+score+'</b> pts \u00b7 \uD83D\uDD25 <b>'+streak+'-day streak</b>';
+  t.appendChild(line);
+  const row=document.createElement('div');row.style.marginTop='10px';
+  const sh=document.createElement('button');
+  sh.textContent='Share my streak';sh.style.cssText='background:#3B6FE0;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:15px;font-weight:700;margin-right:8px';
+  sh.onclick=function(){_doShare(_shareText(dateStr,score,streak))};
+  const ok=document.createElement('button');
+  ok.textContent='Done';ok.style.cssText='background:#232838;color:#9A9AB5;border:none;border-radius:10px;padding:10px 14px;font-size:15px';
+  ok.onclick=function(){if(t.remove)t.remove()};
+  row.appendChild(sh);row.appendChild(ok);t.appendChild(row);
+  document.body.appendChild(t);
+}
+
+// --- the daily maker ---------------------------------------------------------
+MAKERS.dailysudoku=()=>{
+  const dateStr=_today();
+  const log=[];
+  DAILY_RNG=_mulberryRnd(_hashDate(dateStr),log);   // generation consumes this, then we clear it
+  let inner;
+  try{inner=MAKERS.sudoku()}finally{DAILY_RNG=null}
+  DAILY.lastSeq=log;
+  const streak0=(_dailyRead().lastDate===dateStr)?(_dailyRead().streak|0):0;
+  return{
+    score:0,
+    step(dt,end){
+      const g=this;
+      const _end=()=>{end()};
+      inner.step(dt,()=>{
+        g.score=inner.score;
+        if(g.score>0){                                  // solved: record + toast; loss ends quietly
+          const s=_recordDaily(g.score,dateStr);
+          _dailyToast(dateStr,g.score,s.streak|0);
+        }
+        _end();
+      });
+    },
+    draw(){
+      inner.draw();
+      const st=_dailyRead(), ds=(st.lastDate===dateStr)?(st.streak|0):streak0;
+      txt('DAILY '+dateStr+(ds?'  \u00b7  streak '+ds:''),W/2,47,'#FBBF24',12);
+    }
+  };
+};
+
+// Test / debug hooks (harmless in production).
+var DAILY={lastSeq:[],today:()=>_today(),setToday:f=>{_todayFn=f},clearToday:()=>{_todayFn=null},
+  read:_dailyRead,record:_recordDaily,yesterday:_yesterday,shareText:_shareText,seed:_hashDate};
