@@ -1004,7 +1004,9 @@ MAKERS.dailysudoku=()=>{
       const _end=()=>{end()};
       inner.step(dt,()=>{
         g.score=inner.score;
-        if(g.score>0){                                  // solved: record + toast; loss ends quietly
+        // Glow-run only: token play records the daily streak; practice records nothing.
+        const glowRun=(typeof window==='undefined'||typeof window.GL_RUN_MODE==='undefined')||window.GL_RUN_MODE==='glow';
+        if(g.score>0&&glowRun){                            // solved: record + toast; loss ends quietly
           const s=_recordDaily(g.score,dateStr);
           _dailyToast(dateStr,g.score,s.streak|0);
         }
