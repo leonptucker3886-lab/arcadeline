@@ -18,6 +18,9 @@ const GAMES=[
  {id:'streetball',img:'https://www.leonlink.net/img/cards/streetball.jpg',ic:'⚽',name:'Street Football',desc:'Big-head soccer showdown vs the CPU in 60-second matches.',hint:'Left/right or drag to move, up or two fingers to jump, space or tap to kick.'},
 ];
 let P=null,ITEMS=[],BADGES=[],user=null,nick=null,mode='in',cur=null,after=null;
+const STAKE=25;                 // flat Glow entry per token run (Leon's constitution)
+let runMode=null;               // 'glow' | 'practice' — set at run start, read at game over
+function setChip(m){const c=$('modechip');if(!c)return;c.hidden=!m;c.className='modechip '+(m||'');c.textContent=m==='glow'?'GLOW RUN · '+STAKE+' staked':m==='practice'?'PRACTICE':''}
 function go(v){document.body.classList.toggle('playing',v==='play');for(const s of ['home','play','auth','nick','profile'])$('v-'+s).hidden=s!==v;window.scrollTo(0,0)}
 function renderWho(){$('who').innerHTML=user?`<span class="wh" onclick="openProfile()">${P?avHtml(P.av,P.fr):''}<span class="small">${esc(nick||user.email)}</span>${P?`<span class="tk">🪙${P.tokens}</span>`:''}</span> <button class="ghost" onclick="signOut()">Sign out</button>`:`<button onclick="go('auth')">Sign in</button>`}
 const MORE=[{img:'https://www.leonlink.net/img/cards/chimneyrun.jpg',ic:'🏠',name:'Chimney Run',desc:'Run the rooftops, stomp soot gremlins and warp through chimneys.',u:'https://www.leonlink.net/chimney-run.html'},{ic:'🗞️',img:'https://www.leonlink.net/img/cards/paperroute.jpg',name:'Paper Route',desc:'Neon paper-boy run: hit glowing porches, dodge cars and dogs.',u:'https://www.leonlink.net/paper-route.html'}];
@@ -37,16 +40,36 @@ async function signOut(){await sb.auth.signOut();user=null;nick=null;renderWho()
 async function loadLB(g){const {data}=await sb.from('arc_leaderboard').select('nickname,best,lvl,av,fr,co,ti').eq('game',g).order('best',{ascending:false}).limit(20);
  $('lb').innerHTML=(data||[]).map(r=>`<li class="${r.nickname===nick?'me':''}"><span><span class="lv">Lv${r.lvl}</span>${avHtml(r.av||'🕹️',r.fr)} <span style="${r.co?'color:'+r.co:''}">${esc(r.nickname)}</span>${r.ti?`<span class="ti">${esc(r.ti)}</span>`:''}</span><b>${r.best}</b></li>`).join('')||'<li class="small">No scores yet. Be the first.</li>';
  if(user){const {data:b}=await sb.from('arc_scores').select('score').eq('game',g).eq('user_id',user.id).order('score',{ascending:false}).limit(1);$('best').textContent=b?.[0]?.score??'–'}else $('best').textContent='–'}
-function openGame(id){cur=GAMES.find(g=>g.id===id);if(!cur)return;history.replaceState(null,'','#'+id);$('gtitle').textContent=cur.name;$('hint').textContent=cur.hint;$('score').textContent=0;go('play');loadLB(id);showStart()}
+function openGame(id){cur=GAMES.find(g=>g.id===id);if(!cur)return;runMode=null;history.replaceState(null,'','#'+id);$('gtitle').textContent=cur.name;$('hint').textContent=cur.hint;$('score').textContent=0;go('play');loadLB(id);showStart()}
 function overlay(html){const o=$('overlay');o.innerHTML=html;o.hidden=!html}
-function showStart(){overlay(`<h2>${cur.name}</h2><p>${cur.hint}</p><button onclick="begin()">Start</button>`)}
-function begin(){overlay('');startGame(cur.id,onOver)}
+function showStart(){const signed=!!user;
+ overlay(`<h2>${cur.name}</h2><p>${cur.hint}</p>
+ ${signed
+  ?`<div class="modebtns"><button onclick="startRun('glow')">Play for Glow — ${STAKE}</button><button class="ghost" onclick="startRun('practice')">Practice — free</button></div><p class="small stake-note">Glow runs record to the leaderboard · Practice records nothing</p>`
+  :`<button class="ghost" onclick="startRun('practice')">Practice — free</button><p class="small stake-note">Practice records nothing · <a href="#" onclick="go('auth');return false">Sign in to play for Glow</a></p>`}`);
+ setChip(null)}
+function begin(){showStart()}
+async function startRun(m){runMode=m;
+ if(m==='glow'){
+  const bal=P?P.tokens:0;
+  if(!user||bal<STAKE){overlay(`<h2>${cur.name}</h2><p>Need ${STAKE} Glow — you have ${bal}.</p><p class="small">Practice is free and records nothing.</p><button class="ghost" onclick="showStart()">Back</button><button onclick="startRun('practice')">Practice — free</button>`);return}
+  const {data:NB,error}=await sb.rpc('arc_glow_delta',{p_delta:-STAKE,p_reason:'stake:'+cur.id});
+  if(error){overlay(`<h2>${cur.name}</h2><p class="small">Couldn't take the stake: ${esc(error.message)}</p><button class="ghost" onclick="showStart()">Back</button>`);return}
+  if(P)P.tokens=NB;renderWho();
+ }
+ if(typeof window!=='undefined')window.GL_RUN_MODE=m;   // games.js daily maker reads this
+ overlay('');setChip(m);startGame(cur.id,onOver)}
 async function onOver(score,dur){let msg='';
- if(score>0&&!user){msg=`<p>Sign in to post your score to the leaderboard.</p><button class="ghost" onclick="after=()=>{go('play');post(${score},${dur})};go('auth')">Sign in & save</button>`}
- else if(score>0&&!nick){msg=`<button class="ghost" onclick="after=()=>{go('play');post(${score},${dur})};go('nick')">Pick a name & save</button>`}
- overlay(`<h2>Game over</h2><p>Score <b>${score}</b></p><p id="pmsg" class="small"></p>${msg}<button onclick="begin()">Play again</button>`);
- if(score>0&&user&&nick)post(score,dur)}
-async function post(score,dur){const {data:rw,error}=await sb.rpc('arc_submit_score',{p_game:cur.id,p_score:score,p_duration:Math.max(3,Math.round(dur))});
+ const glow=runMode==='glow';
+ const chip=glow?`<span class="modechip glow">GLOW RUN · ${STAKE} staked</span>`:'<span class="modechip practice">PRACTICE · not recorded</span>';
+ if(!glow&&score>0&&!user){msg='<p class="small">Practice — not recorded. <a href="#" onclick="go(\'auth\');return false">Sign in to play for Glow.</a></p>'}
+ else if(!glow&&score>0){msg='<p class="small">Practice — not recorded.</p>'}
+ else if(glow&&score>0&&user&&!nick){msg=`<button class="ghost" onclick="after=()=>{go('play');post(${score},${dur})};go('nick')">Pick a name & save</button>`}
+ overlay(`<h2>Game over</h2><p>${chip}</p><p>Score <b>${score}</b></p><p id="pmsg" class="small"></p>${msg}${glow?`<button onclick="startRun('glow')">Again — ${STAKE} Glow</button><button class="ghost" onclick="startRun('practice')">Practice instead</button>`:`<button onclick="startRun('practice')">Again</button>`}`);
+ if(glow&&score>0&&user&&nick)post(score,dur)}
+async function post(score,dur){const {data:s}=await sb.auth.getSession();
+ if(!s.session?.user){const m=$('pmsg');if(m)m.textContent='Not recorded — you signed out mid-run.';return}
+ const {data:rw,error}=await sb.rpc('arc_submit_score',{p_game:cur.id,p_score:score,p_duration:Math.max(3,Math.round(dur))});
  const m=$('pmsg');if(m)m.innerHTML=error?('Not saved: '+esc(error.message)):`Score saved ✓ <span class="rw">+${rw.tokens} 🪙 · +${rw.xp} XP</span>${rw.pb?' · New personal best!':''}${rw.levelup?` · Level up! You're level ${rw.level}`:''}${(rw.badges||[]).map(b=>`<br>Badge unlocked: ${b.icon} ${esc(b.name)}`).join('')}`;if(!error){loadLB(cur.id);loadUser()}}
 sb.auth.onAuthStateChange(()=>{});renderHome();loadUser();go('home');{const h=location.hash.slice(1);if(GAMES.some(g=>g.id===h))setTimeout(()=>openGame(h),0)}
 
