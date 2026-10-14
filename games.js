@@ -108,18 +108,18 @@ MAKERS.boxing=()=>{
   {n:'Zara "Mirage" Okafor',c:'#B07CFF',hair:'#1A0F0A',skin:'#8A5A3C',hp:110,idle:[.8,1.6],tell:.6,dmg:10,blk:.2,feint:.35,combo:2,sp:.2,spn:'Mirage Hook',dodge:.3},
   {n:'Valka "Iron" Petrova',c:'#FF3D5A',hair:'#E8E0C8',skin:'#F0D0B8',hp:150,idle:[1,1.8],tell:.65,dmg:12,blk:.25,feint:.1,combo:2,sp:.25,spn:'Iron Rage',rage:.35},
   {n:'Queen Seraphine',c:'#FFD23D',hair:'#2B1640',skin:'#C98E6A',hp:190,idle:[.6,1.3],tell:.5,dmg:13,blk:.3,feint:.25,combo:3,sp:.3,spn:'Royal Decree',dodge:.2,rage:.3}];
- let oi=0,o,eh,ph=100,stars=0,st,t,atk=null,queue=0,fx=[],msg='',mt=0,pose='idle',pt=0,fightT=0,shake=0,combo=0,clock=0;
+ let oi=0,o,eh,ph=100,stars=0,st,t,atk=null,queue=0,fx=[],msg='',mt=0,pose='idle',pt=0,fightT=0,shake=0,combo=0,clock=0,ih=0,punish=0;
  const say=(m,d=1)=>{msg=m;mt=d};
  const hitfx=(x,y,c,s)=>{fx.push({x,y,c,s,t:.6});const n=c==='#9A9AB5'?5:14;for(let i=0;i<n;i++){const a=rnd(0,6.28),v=rnd(60,240);parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-60,r:rnd(1.5,4),c:i%3?c:'#FFFFFF',t:rnd(.3,.7)})}if(y<270&&c!=='#9A9AB5'&&c!=='#B07CFF'&&s!=='MISS'){hflash=.25;hsnap=x<W/2?1:-1}};
  let parts=[],flashes=[],hflash=0,hsnap=0;
  const shade=(h,p)=>{const n=parseInt(h.slice(1),16);let r=n>>16,g2=n>>8&255,b2=n&255;const f=v=>Math.max(0,Math.min(255,Math.round(p<0?v*(1+p):v+(255-v)*p)));return'#'+((1<<24)|(f(r)<<16)|(f(g2)<<8)|f(b2)).toString(16).slice(1)};
  const crowd=[];for(let row=0;row<4;row++)for(let i=0;i<16;i++)crowd.push({x:i*24+(row%2)*12-6+rnd(-4,4),y:70+row*26,r:7+row*1.3,c:`hsl(${265+rnd(-15,15)},40%,${8+row*3}%)`,s:rnd(2,5),p:rnd(0,6),a:rnd(1,3)});
  const raging=()=>!!o.rage&&eh<o.hp*o.rage;
- const begin=()=>{o=OPP[oi];eh=o.hp;st='intro';t=2.4;fightT=0;atk=null;queue=0;combo=0};
- const nextIdle=()=>{st='idle';t=rnd(o.idle[0],o.idle[1])*(raging()?.6:1)};
+ const begin=()=>{o=OPP[oi];eh=o.hp;st='intro';t=2.4;fightT=0;atk=null;queue=0;combo=0;ih=0;punish=0};
+ const nextIdle=()=>{st='idle';t=rnd(o.idle[0],o.idle[1])*.7*(raging()?.6:1)};
  const newAtk=()=>{const sp=Math.random()<o.sp*(raging()?1.8:1);
   atk={k:sp?'U':(Math.random()<.5?'L':'R'),feint:!sp&&Math.random()<o.feint};
-  st='tell';t=(sp?o.tell*1.5:o.tell)*(raging()?.8:1);if(sp)say(o.spn+'!',1)};
+  st='tell';t=(sp?o.tell*1.5:o.tell)*(raging()?.8:1)*(punish?.7:1);atk.T=t;punish=0;ih=0;if(sp)say(o.spn+'!',1)};
  begin();
  return{score:0,step(dt,end){const me=this;clock+=dt;mt-=dt;shake=Math.max(0,shake-dt*20);
   fx.forEach(f=>{f.t-=dt;f.y-=30*dt});fx=fx.filter(f=>f.t>0);parts.forEach(p=>{p.t-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=400*dt});parts=parts.filter(p=>p.t>0);hflash=Math.max(0,hflash-dt);hsnap*=Math.max(0,1-dt*8);
@@ -130,16 +130,17 @@ MAKERS.boxing=()=>{
   const ko=()=>{eh=0;st='ko';t=2.8;me.score+=300+Math.round(ph*3)+Math.max(0,Math.round((90-fightT)*3));say('K.O.!',2.6);shake=8};
   const punch=(m,kind)=>{const x=W/2+(kind==='lo'?rnd(-10,10):rnd(-25,25)),y=kind==='lo'?250:185;
    if(st==='idle'||st==='stun'){
-    if(st==='idle'&&kind!=='star'&&Math.random()<(o.dodge||0)){hitfx(x,y,'#B07CFF','SLIP');combo=0;return}
-    if(st==='idle'&&kind!=='star'&&Math.random()<o.blk){hitfx(x,y,'#9A9AB5','BLOCK');combo=0;return}
-    const v=(st==='stun'?1.6:1)*m*(kind==='lo'?5:6);eh-=v;combo++;me.score+=Math.round(v*2)+(st==='stun'?15:0)+Math.min(combo,10)*2;
+    if(st==='idle'&&kind!=='star'&&Math.random()<(o.dodge||0)+ih*.08){hitfx(x,y,'#B07CFF','SLIP');combo=0;pt=.55;punish=1;t=Math.min(t,.12);return}
+    if(st==='idle'&&kind!=='star'&&Math.random()<Math.min(.92,o.blk+.15+ih*.22)){hitfx(x,y,'#9A9AB5','BLOCK');combo=0;pt=.5;ih++;if(ih>=2){punish=1;t=Math.min(t,.15);say('Counter-attack!',.6)}return}
+    const v=(st==='stun'?1.6:(kind==='star'?1:.45))*m*(kind==='lo'?5:6);if(st==='idle'&&kind!=='star'){ih++;if(ih>=(oi<2?3:2)){punish=1;t=Math.min(t,.1)}}eh-=v;combo++;me.score+=Math.round(v*2)+(st==='stun'?15:0)+Math.min(combo,10)*2;
     hitfx(x,y,kind==='star'?'#FFD23D':'#FFFFFF',kind==='star'?'STAR PUNCH!':String(Math.round(v)));shake=kind==='star'?7:2;
     if(kind==='star')me.score+=100;
-    if(st==='idle'&&Math.random()<.35)t=Math.min(t,.3)}
+    }
+   else if(st==='tell'&&!atk.feint&&(t>atk.T*.45||atk.k==='U')){hitfx(x,y,'#9A9AB5',atk.k==='U'?'NO COUNTER':'TOO EARLY');combo=0;pt=.5}
    else if(st==='tell'&&!atk.feint){const v=m*9;eh-=v;combo++;me.score+=30+Math.round(v*2);
     hitfx(x,y,'#FFD23D','COUNTER!');shake=4;if(stars<3){stars++;say('\u2b50 Star earned',.8)}st='stun';t=1;queue=0}
-   else if(st==='tell'&&atk.feint){hitfx(x,y,'#B07CFF','FEINT!');combo=0;atk.feint=false;t=Math.min(t,.2)}
-   else{hitfx(x,y,'#9A9AB5','MISS');combo=0}
+   else if(st==='tell'&&atk.feint){hitfx(x,y,'#B07CFF','FEINT!');combo=0;pt=.5;atk.feint=false;t=Math.min(t,.2);atk.T=t}
+   else{hitfx(x,y,'#9A9AB5','MISS');combo=0;pt=.45}
    if(eh<=0)ko()};
   pt-=dt;const guard=!!K.down;
   if(pt<=0){pose=guard?'guard':'idle';
@@ -158,9 +159,9 @@ MAKERS.boxing=()=>{
    const dodged=(atk.k==='L'&&dr)||(atk.k==='R'&&dl)||(atk.k==='U'&&(dl||dr));
    const wrong=(atk.k==='L'&&dl)||(atk.k==='R'&&dr);
    const blocked=pose==='guard'&&atk.k!=='U';
-   const d=o.dmg*(atk.k==='U'?2.2:1)*(raging()?1.3:1);
+   const d=o.dmg*1.7*(atk.k==='U'?2:1)*(raging()?1.3:1);
    if(dodged){me.score+=10;hitfx(W/2,300,'#3DF5FF','DODGE')}
-   else if(blocked){ph-=d*.25;hitfx(W/2,320,'#9A9AB5','BLOCK');shake=1}
+   else if(blocked){ph-=d*.35;hitfx(W/2,320,'#9A9AB5','BLOCK');shake=1}
    else{ph-=d*(wrong?1.2:1);hitfx(W/2,330,'#FF3D5A','-'+Math.round(d));shake=5;combo=0}
    if(ph<=0){ph=0;st='down';t=2.4;say('DOWN!',2.4)}}
   else if(st==='strike'&&t<=0){if(--queue>0)newAtk();else{st='stun';t=.7}}
