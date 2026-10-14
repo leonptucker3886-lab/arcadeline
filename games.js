@@ -100,6 +100,105 @@ MAKERS.blocks=()=>{const C=20,COLS=10,ROWS=22,ox=40,oy=20;
    pc.c.forEach(([a,b])=>pc.y+b>=0&&cell(pc.x+a,pc.y+b,CL[pc.t]));
    txt('NEXT',W-50,40,'#9A9AB5',13);SH[nx].forEach(([a,b])=>{cx.fillStyle=CL[nx];cx.fillRect(W-80+a*14,52+b*14,12,12)});
    txt('LINES',W-50,130,'#9A9AB5',13);txt(lines,W-50,152);txt('LEVEL',W-50,190,'#9A9AB5',13);txt(lvl,W-50,212)}}};
+MAKERS.squad=()=>{
+ const LVL=[
+  {pat:4,bunk:1,ehp:2,spd:42,erate:1.15,bhp:22},
+  {pat:6,bunk:2,ehp:3,spd:52,erate:.95,bhp:30},
+  {pat:8,bunk:3,ehp:3,spd:62,erate:.78,bhp:38}];
+ const CS=[['Sarge','#3DFFB0','asked for the glory tour'],['Vapors','#3DF5FF','went up in smoke'],['Brick','#FF8A3D','was built different'],['Ember','#FF3DCB','burned out early']];
+ const SPD=150,RNG=175,FR=.4,ERNG=160;
+ let lvl=0,soldiers=[],enemies=[],bunkers=[],shots=[],parts=[],fallen=[],trail=[],mt=null,seen=false,st='ready',stT=2.4;
+ const alive=()=>soldiers.filter(s=>!s.dead);
+ const mkSquad=()=>{fallen=[];soldiers=[0,1,2,3].map(i=>({x:W/2+(i-1.5)*14,y:H-70,hp:6,max:6,cd:rnd(0,.3),dead:false,cs:CS[i][0],c:CS[i][1],line:CS[i][2],a:-Math.PI/2}))};
+ const mkLevel=()=>{const L=LVL[lvl];enemies=[];bunkers=[];trail=[];mt=null;
+  for(let i=0;i<L.pat;i++){let x,y,n=0;do{x=rnd(30,W-30);y=rnd(50,H-250);n++}while(n<20&&Math.hypot(x-W/2,y-(H-70))<150);
+   enemies.push({x,y,hp:L.ehp,max:L.ehp,cd:rnd(0,1),wx:x,wy:y,wt:0,a:Math.PI/2})}
+  for(let i=0;i<L.bunk;i++)bunkers.push({x:(i+1)*W/(L.bunk+1)+rnd(-12,12),y:64+rnd(0,36),hp:L.bhp,max:L.bhp,cd:1.2});
+  st='ready';stT=2.4};
+ const puff=(x,y,c,n,v)=>{for(let i=0;i<n;i++){if(parts.length>70)break;const a=rnd(0,6.28),s=rnd(30,v);parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:rnd(.25,.55),c})}};
+ const nearT=(x,y,list,r)=>{let b=null,bd=r;for(const o of list){const d=Math.hypot(x-o.x,y-o.y);if(d<bd){bd=d;b=o}}return b};
+ mkSquad();mkLevel();
+ return{score:0,step(dt,end){const me=this,L=LVL[lvl];
+  parts.forEach(p=>{p.t-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt});parts=parts.filter(p=>p.t>0);
+  if(st!=='play'){stT-=dt;if(stT<=0){if(st==='dead')return end();if(st==='win'){me.score+=1000;return end()}st='play'}return}
+  // tap-to-move: shares the framework's pointer state (tx/ty + cv rect)
+  if(tx!=null&&!seen){seen=true;const r=cv.getBoundingClientRect();mt={x:(tx-r.left)*W/r.width,y:(ty-r.top)*H/r.height,ttl:2.6}}
+  if(tx==null)seen=false;
+  const ld=alive()[0];if(!ld)return end();
+  if(K.left||K.right||K.up||K.down)mt=null;
+  let dx=K.right-K.left,dy=K.down-K.up;
+  if(dx||dy){const m=Math.hypot(dx,dy);ld.a=Math.atan2(dy/m,dx/m);ld.x+=dx/m*SPD*dt;ld.y+=dy/m*SPD*dt}
+  else if(mt){mt.ttl-=dt;const a=Math.atan2(mt.y-ld.y,mt.x-ld.x),d=Math.hypot(mt.x-ld.x,mt.y-ld.y);
+   if(d<7||mt.ttl<=0)mt=null;else{ld.a=a;ld.x+=Math.cos(a)*SPD*dt;ld.y+=Math.sin(a)*SPD*dt}}
+  ld.x=Math.max(10,Math.min(W-10,ld.x));ld.y=Math.max(30,Math.min(H-10,ld.y));
+  trail.unshift({x:ld.x,y:ld.y});if(trail.length>300)trail.pop();
+  // followers follow the leader's breadcrumb trail
+  alive().forEach((s,i)=>{if(i===0)return;const tp=trail[Math.min(trail.length-1,i*16)];
+   const d=Math.hypot(tp.x-s.x,tp.y-s.y);if(d>4){s.a=Math.atan2(tp.y-s.y,tp.x-s.x);const v=Math.min(SPD*1.25,d*6);s.x+=Math.cos(s.a)*v*dt;s.y+=Math.sin(s.a)*v*dt}});
+  // squad auto-fire at nearest target in range
+  alive().forEach(s=>{s.cd-=dt;const t=nearT(s.x,s.y,enemies,RNG)||nearT(s.x,s.y,bunkers,RNG);
+   if(t&&s.cd<=0){const a=Math.atan2(t.y-s.y,t.x-s.x);s.a=a;s.cd=FR;
+    shots.push({x:s.x+Math.cos(a)*9,y:s.y+Math.sin(a)*9,vx:Math.cos(a)*360,vy:Math.sin(a)*360,t:1,f:1})}});
+  // enemy patrols: wander until the squad is spotted (250px), close in, and stand and shoot in range
+  enemies.forEach(e=>{e.cd-=dt;const s0=nearT(e.x,e.y,alive(),ERNG);
+   if(s0){e.a=Math.atan2(s0.y-e.y,s0.x-e.x);
+    if(e.cd<=0){e.cd=L.erate;shots.push({x:e.x+Math.cos(e.a)*9,y:e.y+Math.sin(e.a)*9,vx:Math.cos(e.a)*175,vy:Math.sin(e.a)*175,t:1.8,f:0,dmg:1})}}
+   else{const s1=nearT(e.x,e.y,alive(),250);
+    if(s1){const a=Math.atan2(s1.y-e.y,s1.x-e.x);e.a=a;e.x+=Math.cos(a)*L.spd*1.15*dt;e.y+=Math.sin(a)*L.spd*1.15*dt}
+    else{e.wt-=dt;const d=Math.hypot(e.wx-e.x,e.wy-e.y);
+     if(d<8||e.wt<=0){e.wx=rnd(30,W-30);e.wy=rnd(50,H-240);e.wt=rnd(1,3)}
+     const a=Math.atan2(e.wy-e.y,e.wx-e.x);e.a=a;e.x+=Math.cos(a)*L.spd*dt;e.y+=Math.sin(a)*L.spd*dt}}});
+  // enemy separation
+  for(let i=0;i<enemies.length;i++)for(let j=i+1;j<enemies.length;j++){const a=enemies[i],b=enemies[j],d=Math.hypot(a.x-b.x,a.y-b.y);
+   if(d<14&&d>0){const p=(14-d)*dt*2,ax=(a.x-b.x)/d,ay=(a.y-b.y)/d;a.x+=ax*p;a.y+=ay*p;b.x-=ax*p;b.y-=ay*p}}
+  // bunkers fire slow heavy shells
+  bunkers.forEach(b=>{b.cd-=dt;const s0=nearT(b.x,b.y,alive(),260);
+   if(s0&&b.cd<=0){b.cd=2.4;const a=Math.atan2(s0.y-b.y,s0.x-b.x);
+    shots.push({x:b.x+Math.cos(a)*16,y:b.y+Math.sin(a)*16,vx:Math.cos(a)*130,vy:Math.sin(a)*130,t:2.6,f:0,dmg:2})}});
+  // move shots and resolve hits
+  shots.forEach(o=>{o.x+=o.vx*dt;o.y+=o.vy*dt;o.t-=dt});
+  for(const o of shots){if(o.t<=0)continue;
+   if(o.f){
+    for(let i=0;i<enemies.length;i++){const e=enemies[i];
+     if(Math.hypot(o.x-e.x,o.y-e.y)<9){o.t=0;e.hp--;puff(o.x,o.y,'#FFE03D',4,120);
+      if(e.hp<=0){enemies.splice(i,1);me.score+=25;puff(e.x,e.y,'#FF5A5A',10,170)}break}}
+    if(o.t>0)for(let i=0;i<bunkers.length;i++){const b=bunkers[i];
+     if(Math.hypot(o.x-b.x,o.y-b.y)<17){o.t=0;b.hp--;puff(o.x,o.y,'#3DF5FF',4,120);
+      if(b.hp<=0){bunkers.splice(i,1);me.score+=150;puff(b.x,b.y,'#FFE03D',16,220)}break}}}
+   else{for(const s of alive()){if(Math.hypot(o.x-s.x,o.y-s.y)<8){o.t=0;s.hp-=o.dmg;puff(o.x,o.y,'#FF3D5A',5,140);
+     if(s.hp<=0){s.dead=true;fallen.push(s);puff(s.x,s.y,'#9A9AB5',12,180)}
+     break}}}}
+  shots=shots.filter(o=>o.t>0&&o.x>-10&&o.x<W+10&&o.y>-10&&o.y<H+10);
+  if(shots.length>60)shots.splice(0,shots.length-60);
+  if(!alive().length){st='dead';stT=2;return}
+  if(!enemies.length&&!bunkers.length){me.score+=500*(lvl+1);lvl++;if(lvl>=LVL.length){st='win';stT=2.6}else mkLevel()}},
+ draw(){
+  bunkers.forEach(b=>{cx.fillStyle='#22223A';cx.fillRect(b.x-14,b.y-14,28,28);
+   cx.strokeStyle='#3DF5FF';cx.lineWidth=2;cx.strokeRect(b.x-14,b.y-14,28,28);
+   cx.strokeStyle='#FF5A5A';cx.beginPath();cx.moveTo(b.x-6,b.y-6);cx.lineTo(b.x+6,b.y+6);cx.moveTo(b.x+6,b.y-6);cx.lineTo(b.x-6,b.y+6);cx.stroke();
+   cx.fillStyle='#151526';cx.fillRect(b.x-14,b.y-22,28,5);cx.fillStyle='#FFE03D';cx.fillRect(b.x-14,b.y-22,28*Math.max(0,b.hp/b.max),5)});
+  enemies.forEach(e=>{cx.fillStyle='#5A1E24';cx.beginPath();cx.arc(e.x,e.y,6,0,7);cx.fill();
+   cx.fillStyle='#8A2A33';cx.beginPath();cx.arc(e.x,e.y-2,4.5,Math.PI,0);cx.fill();
+   cx.strokeStyle='#FF8A5A';cx.lineWidth=3;cx.beginPath();cx.moveTo(e.x,e.y);cx.lineTo(e.x+Math.cos(e.a)*11,e.y+Math.sin(e.a)*11);cx.stroke()});
+  alive().forEach((s,i)=>{cx.fillStyle=s.c;cx.beginPath();cx.arc(s.x,s.y,6,0,7);cx.fill();
+   cx.fillStyle=s.c;cx.beginPath();cx.arc(s.x,s.y-2,4.4,Math.PI,0);cx.fill();
+   cx.fillStyle='#0B0B14';cx.beginPath();cx.arc(s.x,s.y-2,3.4,Math.PI,0);cx.fill();
+   cx.strokeStyle='#EDEDF5';cx.lineWidth=2.5;cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(s.x+Math.cos(s.a)*10,s.y+Math.sin(s.a)*10);cx.stroke();
+   cx.fillStyle='#151526';cx.fillRect(s.x-8,s.y-13,16,3);cx.fillStyle=s.c;cx.fillRect(s.x-8,s.y-13,16*Math.max(0,s.hp/s.max),3);
+   if(i===0)txt('▼',s.x,s.y-20,'#FFE03D',9)});
+  if(mt){cx.strokeStyle='#3DF5FF';cx.lineWidth=1.5;cx.strokeRect(mt.x-5,mt.y-5,10,10)}
+  shots.forEach(o=>{if(o.f){cx.strokeStyle='#FFE03D';cx.lineWidth=2;const m=8/Math.hypot(o.vx,o.vy)||0;
+   cx.beginPath();cx.moveTo(o.x-o.vx*m,o.y-o.vy*m);cx.lineTo(o.x,o.y);cx.stroke()}
+   else{cx.fillStyle=o.dmg>1?'#FF3DCB':'#FF5A5A';cx.fillRect(o.x-2,o.y-2,4,4)}});
+  parts.forEach(p=>{cx.globalAlpha=Math.max(0,Math.min(1,p.t*2.4));cx.fillStyle=p.c;cx.fillRect(p.x-1.5,p.y-1.5,3,3)});cx.globalAlpha=1;
+  cx.textAlign='left';cx.font='bold 12px system-ui';cx.fillStyle='#9A9AB5';cx.fillText('MISSION '+(lvl+1)+'/3',10,20);
+  alive().forEach((s,i)=>{cx.fillStyle=s.c;cx.fillRect(10+i*16,28,12,8)});
+  cx.textAlign='right';cx.fillStyle='#FF8A5A';cx.fillText(enemies.length+' patrol · '+bunkers.length+' bunk',W-10,20);
+  if(fallen.length){cx.textAlign='left';cx.font='11px system-ui';cx.fillStyle='#9A9AB5';
+   fallen.slice(-3).forEach((s,i)=>cx.fillText('☠ '+s.cs+' — '+s.line,10,H-8-(2-i)*15))}
+  if(st==='ready')txt('MISSION '+(lvl+1)+' — READY',W/2,H/2,'#FFD23D',20);
+  if(st==='dead')txt('SQUAD WIPED',W/2,H/2,'#FF3D5A',22);
+  if(st==='win')txt('MISSION COMPLETE',W/2,H/2,'#3DFFB0',20)}}};
 MAKERS.boxing=()=>{
  const OPP=[
   {n:'Rosa "Rookie" Vega',c:'#FF7A59',hair:'#3A1F12',skin:'#E0A27A',hp:80,idle:[1.4,2.4],tell:.85,dmg:9,blk:.1,feint:0,combo:1,sp:.15,spn:'Haymaker'},
