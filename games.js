@@ -423,3 +423,491 @@ MAKERS.maze=()=>{
   if(st==='ready')txt(lvl===1?'READY':'LEVEL '+lvl,W/2,Y(11)+5,'#FFD23D',18);
   if(st==='dead')txt(lives>0?'ZAPPED!':'GAME OVER',W/2,Y(11)+5,'#FF3D5A',18);
   if(st==='clear')txt('MAZE CLEAR!',W/2,Y(11)+5,'#3DFFB0',18)}}};
+
+// ============================================================================
+// ARCADELINE WAVE 1 — games-wave1.js
+// Six vanilla-JS ports registered as MAKERS.<id> for the Arcadeline runtime.
+// Mechanics faithfully adapted from sausi-7/games (MIT, Copyright (c) 2026
+// Saurabh Singh); all code here is rewritten into the MAKERS shape.
+// Attribution to ship with the games:
+//   "Portions adapted from sausi-7/games, MIT licensed, (c) 2026 Saurabh Singh."
+// Canvas contract: 360x480 portrait (cv, cx, W=360, H=480), shared input via
+// K/PK/take()/drag, helpers rnd/txt/clear, score via setScore, end() to finish.
+// Each MAKER returns {score, step(dt,end), draw()}.
+// STAGING ONLY — not deployed, not integrated.
+// ============================================================================
+/* MAKERS declared above (live games.js) */
+
+// ---------------------------------------------------------------------------
+// Swipe Assassin — ported from sausi-7/games (MIT). Mechanics faithful; code rewritten.
+// ---------------------------------------------------------------------------
+MAKERS.swipe=()=>{
+ const G=6,T=48,ox=(W-G*T)/2,oy=104;
+ const wall=[[0,0,0,0,0,0],[0,1,1,0,1,0],[0,0,0,0,1,0],[0,1,0,0,0,0],[0,1,0,1,1,0],[0,0,0,0,0,0]];
+ const dirs=["up","down","left","right"];
+ let P,E,wave,t,streak,fx,dead;
+ const free=(x,y)=>!(x<0||y<0||x>=G||y>=G||wall[y][x]);
+ const behind=(e,px,py)=>(e.d==="up"&&py>e.y)||(e.d==="down"&&py<e.y)||(e.d==="left"&&px>e.x)||(e.d==="right"&&px<e.x);
+ const cell=(x,y)=>({x:ox+x*T+T/2,y:oy+y*T+T/2});
+ function spawn(){
+  P={x:0,y:0,d:"right"};E=[];t=0;streak=0;fx=[];dead=false;
+  const spots=[[5,1],[3,4],[1,5],[4,0],[2,2],[5,5],[0,5],[4,4]];
+  const n=Math.min(2+wave,spots.length);
+  for(let i=0;i<n;i++)E.push({x:spots[i][0],y:spots[i][1],d:dirs[i%4],a:1});
+ }
+ wave=1;spawn();
+ function face(c,d,fn){
+  cx.save();cx.translate(c.x,c.y);
+  cx.rotate(d==="up"?0:d==="right"?Math.PI/2:d==="down"?Math.PI:-Math.PI/2);fn();cx.restore();
+ }
+ function move(d){
+  if(dead)return;
+  let x=P.x,y=P.y;
+  if(d==="up")y--;if(d==="down")y++;
+  if(d==="left")x--;if(d==="right")x++;
+  if(!free(x,y))return;
+  P.d=d;
+  const hit=E.find(e=>e.a&&e.x===x&&e.y===y);
+  if(hit){
+   if(behind(hit,P.x,P.y)){hit.a=0;fx.push({x,y,k:0});streak=t<3?streak+1:1;t=0;g.score+=100*streak;}
+   else{dead=true;return;}
+  }
+  P.x=x;P.y=y;
+  E.forEach(e=>{
+   if(!e.a)return;
+   let ex=e.x,ey=e.y;
+   if(e.d==="up")ey--;if(e.d==="down")ey++;
+   if(e.d==="left")ex--;if(e.d==="right")ex++;
+   if(!free(ex,ey)){e.d=dirs[(Math.random()*4)|0];return;}
+   e.x=ex;e.y=ey;
+   if(ex===P.x&&ey===P.y)dead=true;
+  });
+  if(E.every(e=>!e.a)){wave++;spawn();}
+ }
+ const g={
+  score:0,
+  step(dt,end){
+   t+=dt;
+   fx.forEach(f=>f.k+=dt);fx=fx.filter(f=>f.k<0.35);
+   for(const d of dirs)if(take(d))move(d);
+   if(dead)end();
+  },
+  draw(){
+   clear();
+   txt("SWIPE ASSASSIN",W/2,30,"#38bdf8",20);
+   txt("wave "+wave+"   score "+g.score,W/2,52,"#94a3b8",14);
+   cx.strokeStyle="#334155";cx.lineWidth=1;
+   for(let i=0;i<=G;i++){
+    cx.beginPath();cx.moveTo(ox+i*T,oy);cx.lineTo(ox+i*T,oy+G*T);cx.stroke();
+    cx.beginPath();cx.moveTo(ox,oy+i*T);cx.lineTo(ox+G*T,oy+i*T);cx.stroke();
+   }
+   for(let y=0;y<G;y++)for(let x=0;x<G;x++)if(wall[y][x]){
+    cx.fillStyle="#475569";cx.fillRect(ox+x*T+9,oy+y*T+9,T-18,T-18);
+   }
+   E.forEach(e=>{
+    if(!e.a)return;const c=cell(e.x,e.y);
+    cx.fillStyle="#f87171";cx.beginPath();cx.arc(c.x,c.y,15,0,7);cx.fill();
+    face(c,e.d,()=>{cx.fillStyle="#fecaca";cx.beginPath();cx.moveTo(0,-16);cx.lineTo(-8,-4);cx.lineTo(8,-4);cx.fill();});
+   });
+   const c=cell(P.x,P.y);
+   cx.fillStyle="#38bdf8";cx.beginPath();cx.arc(c.x,c.y,15,0,7);cx.fill();
+   face(c,P.d,()=>{cx.fillStyle="#fff";cx.beginPath();cx.moveTo(0,-16);cx.lineTo(-8,-4);cx.lineTo(8,-4);cx.fill();});
+   fx.forEach(f=>{
+    const c2=cell(f.x,f.y);cx.strokeStyle="rgba(255,255,255,"+(1-f.k/0.35)+")";cx.lineWidth=4;
+    cx.beginPath();cx.moveTo(c2.x-14,c2.y-14);cx.lineTo(c2.x+14,c2.y+14);cx.stroke();
+    cx.beginPath();cx.moveTo(c2.x+14,c2.y-14);cx.lineTo(c2.x-14,c2.y+14);cx.stroke();
+   });
+   if(streak>1)txt("COMBO x"+streak,W/2,oy+G*T+26,"#fbbf24",16);
+   txt("swipe or arrows - strike from behind",W/2,H-16,"#64748b",12);
+  }
+ };
+ return g;
+};
+
+// ---------------------------------------------------------------------------
+// Hex Puzzle — ported from sausi-7/games (MIT). Mechanics faithful; code rewritten.
+// ---------------------------------------------------------------------------
+MAKERS.hex=()=>{
+const SZ=21,R=4,BX=180,BY=190,TY=410,SQ3=Math.sqrt(3),MS=15;
+const key=(q,r)=>q+','+r;
+const COLS=['#22c55e','#38bdf8','#f97316','#e879f9','#facc15','#fb7185','#a78bfa'];
+const SH=[[[0,0]],[[0,0],[1,0]],[[0,0],[0,1]],[[0,0],[-1,1]],[[0,0],[1,0],[0,1]],[[0,0],[-1,0],[1,0]],[[0,0],[0,-1],[0,1]],[[0,0],[1,0],[2,0]],[[0,0],[0,1],[0,2]],[[0,0],[-1,1],[-2,2]],[[0,0],[1,0],[0,1],[-1,1]],[[0,0],[1,0],[0,1],[0,2]],[[0,0],[-1,0],[0,1],[1,0]]];
+const board=new Map(),LQ={},LR={},LS={};
+for(let q=-R;q<=R;q++)for(let r=-R;r<=R;r++){if(Math.abs(q+r)>R)continue;const k=key(q,r);board.set(k,null);(LQ[q]=LQ[q]||[]).push(k);(LR[r]=LR[r]||[]).push(k);(LS[q+r]=LS[q+r]||[]).push(k);}
+const LINES=[...Object.values(LQ),...Object.values(LR),...Object.values(LS)];
+const hp=(q,r,s)=>{s=s||SZ;return[BX+s*SQ3*(q+r/2),BY+s*1.5*r];};
+function ph(x,y){const px=(x-BX)/SZ,py=(y-BY)/SZ;const fq=SQ3/3*px-py/3,fr=2/3*py,fs=-fq-fr;let q=Math.round(fq),r=Math.round(fr);const s=Math.round(fs),dq=Math.abs(q-fq),dr=Math.abs(r-fr),ds=Math.abs(s-fs);if(dq>dr&&dq>ds)q=-r-s;else if(dr>ds)r=-q-s;return{q,r};}
+function hx(x,y,s,fill,al,lw){cx.beginPath();for(let i=0;i<6;i++){const an=Math.PI/6+Math.PI/3*i,X=x+s*Math.cos(an),Y=y+s*Math.sin(an);i?cx.lineTo(X,Y):cx.moveTo(X,Y);}cx.closePath();cx.globalAlpha=al==null?1:al;cx.fillStyle=fill;cx.fill();cx.globalAlpha=1;if(lw){cx.lineWidth=lw;cx.strokeStyle='#fff';cx.stroke();}}
+const XS=[64,180,296];
+let tray=[],sel=0,cur={q:0,r:0},trayMode=false,svCur=null,pd=null,downP=null,fx=[],over=false,ended=false,swallow=false;
+function newTray(){tray=[];for(let i=0;i<3;i++)tray.push({b:SH[(rnd(0,SH.length))|0],c:COLS[(rnd(0,COLS.length))|0],x:XS[i],y:TY,hx:XS[i],hy:TY});sel=0;}
+function cells(b,oq,or){const t=[];for(const d of b){const k=key(oq+d[0],or+d[1]);if(!board.has(k)||board.get(k))return null;t.push(k);}return t;}
+function clearLines(){let n=0;for(const L of LINES){let f=true;for(const k of L)if(!board.get(k)){f=false;break;}if(f){n++;for(const k of L){board.set(k,null);const p=k.split(','),xy=hp(+p[0],+p[1]);fx.push({x:xy[0],y:xy[1],t:0});}}}return n;}
+function anyMove(){for(const t of tray)for(const k of board.keys()){const p=k.split(',');if(cells(t.b,+p[0],+p[1]))return true;}return false;}
+function place(t,oq,or){const ts=cells(t.b,oq,or);if(!ts)return false;for(const k of ts)board.set(k,t.c);g.score+=ts.length+10*clearLines();tray.splice(tray.indexOf(t),1);if(!tray.length)newTray();else if(sel>=tray.length)sel=0;if(!anyMove())over=true;return true;}
+function mv(dq,dr){if(board.has(key(cur.q+dq,cur.r+dr)))cur={q:cur.q+dq,r:cur.r+dr};}
+function pos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+function onDown(e){const p=pos(e);downP=p;for(let i=0;i<tray.length;i++){const t=tray[i],dx=p.x-t.x,dy=p.y-t.y;if(dx*dx+dy*dy<1936){pd={i};sel=i;e.preventDefault();return;}}}
+function onMove(e){if(!pd)return;const p=pos(e),t=tray[pd.i];t.x=p.x;t.y=p.y;}
+function onUp(e){const p=pos(e);if(pd){const t=tray[pd.i];pd=null;swallow=true;if(downP&&Math.hypot(p.x-downP.x,p.y-downP.y)<8){t.x=t.hx;t.y=t.hy;downP=null;return;}const o=ph(t.x,t.y);if(!place(t,o.q,o.r)){t.x=t.hx;t.y=t.hy;}downP=null;return;}if(downP&&Math.hypot(p.x-downP.x,p.y-downP.y)<8){swallow=true;const o=ph(p.x,p.y);if(board.has(key(o.q,o.r))){cur=o;trayMode=false;}}downP=null;}
+function cleanup(){cv.removeEventListener('pointerdown',onDown);cv.removeEventListener('pointermove',onMove);cv.removeEventListener('pointerup',onUp);cv.removeEventListener('pointercancel',onUp);}
+cv.addEventListener('pointerdown',onDown);cv.addEventListener('pointermove',onMove);cv.addEventListener('pointerup',onUp);cv.addEventListener('pointercancel',onUp);
+newTray();
+const g={score:0,
+step(dt,end){if(over&&!ended){ended=true;cleanup();end();return;}
+for(const f of fx)f.t+=dt*2.5;fx=fx.filter(f=>f.t<1);
+if(take('left')){if(trayMode)sel=(sel+2)%3;else mv(-1,0);}
+if(take('right')){if(trayMode)sel=(sel+1)%3;else mv(1,0);}
+if(take('up')){if(trayMode){trayMode=false;cur=svCur||cur;}else mv(0,-1);}
+if(take('down')){if(trayMode)sel=(sel+1)%3;else if(board.has(key(cur.q,cur.r+1)))mv(0,1);else{trayMode=true;svCur=cur;}}
+if(take('fire')){if(swallow)swallow=false;else if(trayMode){trayMode=false;cur=svCur||cur;}else{const t=tray[sel];if(t)place(t,cur.q,cur.r);}}},
+draw(){clear();txt('SCORE '+g.score,180,26,'#ffffff',20);
+for(const e of board){const p=e[0].split(','),xy=hp(+p[0],+p[1]);hx(xy[0],xy[1],SZ-1.5,e[1]||'#182a44');}
+for(const f of fx)hx(f.x,f.y,(SZ-1.5)*(1+f.t*0.35),'#ffffff',(1-f.t)*0.7);
+if(pd){const t=tray[pd.i],o=ph(t.x,t.y),ok=cells(t.b,o.q,o.r);
+for(const d of t.b){const xy=hp(o.q+d[0],o.r+d[1]);hx(xy[0],xy[1],SZ-2,t.c,ok?0.6:0.22);}
+if(!ok){const xy=hp(o.q,o.r);hx(xy[0],xy[1],SZ-1.5,'#ef4444',0.3,2);}}
+for(let i=0;i<tray.length;i++){const t=tray[i];if(pd&&tray[pd.i]===t)continue;
+for(const d of t.b)hx(t.x+MS*SQ3*(d[0]+d[1]/2),t.y+MS*1.5*d[1],MS-1.5,t.c);
+if(i===sel)hx(t.x,t.y,MS*2.4,'rgba(0,0,0,0)',0,2);}
+if(pd){const t=tray[pd.i];for(const d of t.b){const xy=hp(d[0],d[1]);hx(t.x+xy[0]-BX,t.y+xy[1]-BY,SZ-2,t.c);}}
+if(trayMode)hx(XS[sel],TY,MS*2.4,'rgba(0,0,0,0)',0,2);
+else{const xy=hp(cur.q,cur.r);hx(xy[0],xy[1],SZ-1.5,'rgba(0,0,0,0)',0,2);}
+txt('drag pieces onto the board - fill a line to clear',180,466,'#7d8fb0',11);}};
+return g;};
+// Line Trap — ported from sausi-7/games (MIT). Mechanics faithful; code rewritten.
+MAKERS.linetrap=()=>{
+const TAU=Math.PI*2,CX=W/2,CY=H/2;
+let lines=[],enemies=[],kills=0,wave=0,waveT=0,over=false;
+let sx=0,sy=0,px=0,py=0,down=false;
+let cur={x:CX,y:CY},anchor=null;
+function hit(l,e){
+  const ax=l.x1,ay=l.y1,bx=l.x2,by=l.y2;
+  const len=Math.hypot(bx-ax,by-ay);
+  if(len<1)return false;
+  const dx=(bx-ax)/len,dy=(by-ay)/len;
+  const t=Math.max(0,Math.min(len,dx*(e.x-ax)+dy*(e.y-ay)));
+  return Math.hypot(ax+dx*t-e.x,ay+dy*t-e.y)<=e.r;
+}
+function spawn(){
+  const n=4+2*wave;
+  for(let i=0;i<n;i++){
+    const edge=(Math.random()*4)|0;let x,y;
+    if(edge===0){x=rnd(0,W);y=-14;}else if(edge===1){x=W+14;y=rnd(0,H);}
+    else if(edge===2){x=rnd(0,W);y=H+14;}else{x=-14;y=rnd(0,H);}
+    enemies.push({x,y,r:9,sp:(30+9*wave)*rnd(.8,1.3),d:rnd(0,1+.4*wave)});
+  }
+}
+function nextWave(){wave++;waveT=0;enemies=[];spawn();}
+nextWave();
+function pos(e){const r=cv.getBoundingClientRect();
+  return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+const pd=e=>{const p=pos(e);down=true;sx=px=p.x;sy=py=p.y;e.preventDefault();};
+const pm=e=>{if(!down)return;const p=pos(e);px=p.x;py=p.y;e.preventDefault();};
+const pu=e=>{if(!down)return;down=false;e.preventDefault();
+  if(Math.hypot(px-sx,py-sy)>15)lines.push({x1:sx,y1:sy,x2:px,y2:py,t:0});};
+cv.addEventListener('pointerdown',pd);cv.addEventListener('pointermove',pm);
+cv.addEventListener('pointerup',pu);cv.addEventListener('pointercancel',pu);
+function cleanup(){cv.removeEventListener('pointerdown',pd);
+  cv.removeEventListener('pointermove',pm);cv.removeEventListener('pointerup',pu);
+  cv.removeEventListener('pointercancel',pu);}
+function step(dt,end){
+  const fin=()=>{cleanup();end();};
+  if(over)return;
+  const s=260*dt;
+  if(K.left)cur.x-=s;if(K.right)cur.x+=s;if(K.up)cur.y-=s;if(K.down)cur.y+=s;
+  cur.x=Math.max(0,Math.min(W,cur.x));cur.y=Math.max(0,Math.min(H,cur.y));
+  if(take('fire')){
+    if(anchor&&Math.hypot(cur.x-anchor.x,cur.y-anchor.y)>15){
+      lines.push({x1:anchor.x,y1:anchor.y,x2:cur.x,y2:cur.y,t:0});anchor=null;}
+    else anchor={x:cur.x,y:cur.y};
+  }
+  waveT+=dt;
+  for(const l of lines)l.t+=dt;
+  lines=lines.filter(l=>l.t<2);
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    if(e.d>0){e.d-=dt;continue;}
+    const dx=CX-e.x,dy=CY-e.y,d=Math.hypot(dx,dy)||1;
+    e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;
+    if(d<16){over=true;fin();return;}
+    for(const l of lines)if(hit(l,e)){enemies.splice(i,1);kills++;g.score+=10;break;}
+  }
+  if(!enemies.length){
+    g.score+=250+Math.max(0,200-Math.floor(waveT)*10);
+    if(wave>=5){over=true;fin();return;}
+    nextWave();
+  }
+}
+function draw(){
+  clear();
+  cx.save();cx.shadowColor='#38bdf8';cx.shadowBlur=22;cx.fillStyle='#38bdf8';
+  cx.beginPath();cx.arc(CX,CY,16,0,TAU);cx.fill();cx.restore();
+  cx.strokeStyle='#a5f3fc';cx.lineWidth=4;cx.lineCap='round';
+  for(const l of lines){cx.globalAlpha=1-l.t/2;cx.beginPath();
+    cx.moveTo(l.x1,l.y1);cx.lineTo(l.x2,l.y2);cx.stroke();}
+  cx.globalAlpha=1;
+  if(down){cx.beginPath();cx.moveTo(sx,sy);cx.lineTo(px,py);cx.stroke();}
+  if(anchor){cx.setLineDash([6,6]);cx.beginPath();
+    cx.moveTo(anchor.x,anchor.y);cx.lineTo(cur.x,cur.y);cx.stroke();cx.setLineDash([]);}
+  for(const e of enemies){cx.fillStyle='#ef4444';cx.beginPath();cx.arc(e.x,e.y,e.r,0,TAU);cx.fill();}
+  cx.strokeStyle='#f8fafc';cx.lineWidth=1;cx.beginPath();cx.arc(cur.x,cur.y,7,0,TAU);cx.stroke();
+  txt('WAVE '+wave+'/5',W/2,20,'#e5e7eb',14);
+  txt('ENEMIES LEFT '+enemies.length+'   SCORE '+g.score,W/2,40,'#93c5fd',13);
+  txt('DRAG: DRAW LINE  |  ARROWS+SPACE: ANCHOR+DRAW',W/2,H-12,'#64748b',10);
+}
+const g={score:0,step,draw};
+return g;
+};
+// Sudoku — ported from sausi-7/games (MIT). Mechanics faithful; code rewritten.
+MAKERS.sudoku=()=>{
+// --- puzzle: backtracking fill + hole-digging with unique-solution check ---
+const sh=a=>{for(let i=a.length-1;i>0;i--){const j=(rnd(0,i+1))|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const ok=(g,r,c,n)=>{for(let i=0;i<9;i++)if(g[r][i]===n||g[i][c]===n)return 0;const br=r-r%3,bc=c-c%3;for(let i=0;i<3;i++)for(let j=0;j<3;j++)if(g[br+i][bc+j]===n)return 0;return 1};
+const SOL=[...Array(9)].map(()=>Array(9).fill(0));
+const fill=g=>{for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){for(const n of sh([1,2,3,4,5,6,7,8,9]))if(ok(g,r,c,n)){g[r][c]=n;if(fill(g))return 1;g[r][c]=0}return 0}return 1};
+fill(SOL);
+const count2=g=>{let n=0;const s=g.map(r=>r.slice());const rec=()=>{if(n>1)return;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!s[r][c]){for(let v=1;v<=9;v++)if(ok(s,r,c,v)){s[r][c]=v;rec();s[r][c]=0}return}n++};rec();return n};
+const PUZ=SOL.map(r=>r.slice());let rem=0,guard=0;
+while(rem<44&&guard++<400){const r=(rnd(0,9))|0,c=(rnd(0,9))|0,t=PUZ[r][c];if(!t)continue;PUZ[r][c]=0;if(count2(PUZ)!==1)PUZ[r][c]=t;else rem++}
+// --- state ---
+const BX=18,BY=56,CS=36,PY=388,BY2=432;
+const grid=PUZ.map(r=>r.slice()),giv=PUZ.map(r=>r.map(v=>v!==0));
+const notes=[...Array(9)].map(()=>[...Array(9)].map(()=>new Set()));
+let cur={r:4,c:4},nm=false,mist=0,t=0,done=0,lost=0,fin=0,flT=0,fx=0,fy=0;
+const secs=()=>t|0;
+const fmt=s=>((s/60)|0)+':'+(''+(s%60|0)).padStart(2,'0');
+function put(n){if(done||lost)return;const{r,c}=cur;if(giv[r][c])return;
+  if(n===0){grid[r][c]=0;notes[r][c].clear();return}
+  if(nm){notes[r][c].has(n)?notes[r][c].delete(n):notes[r][c].add(n);return}
+  if(n===SOL[r][c]){grid[r][c]=n;notes[r][c].clear();
+    for(let i=0;i<9;i++){notes[r][i].delete(n);notes[i][c].delete(n)}
+    if(grid.every((row,rr)=>row.every((v,cc)=>v!==0))){fin=Math.max(0,10000-secs()*10-mist*500);done=1.6}}
+  else{mist++;flT=.6;fx=r;fy=c;if(mist>=3)lost=1.4}}
+const kd=e=>{if(e.key>='1'&&e.key<='9')put(+e.key);else if(e.key==='0'||e.key==='Backspace'||e.key==='Delete')put(0);else if(e.key==='n'||e.key==='N')nm=!nm};
+addEventListener('keydown',kd);
+const pd=e=>{if(done||lost)return;const b=cv.getBoundingClientRect();
+  const x=(e.clientX-b.left)*W/b.width,y=(e.clientY-b.top)*H/b.height;
+  const br=((y-BY)/CS)|0,bc=((x-BX)/CS)|0;
+  if(br>=0&&br<9&&bc>=0&&bc<9){cur={r:br,c:bc};return}
+  if(y>=PY&&y<=PY+36){const i=((x-BX)/CS)|0;if(i>=0&&i<9)put(i+1);return}
+  if(y>=BY2&&y<=BY2+40){if(x<180)nm=!nm;else put(0)}};
+cv.addEventListener('pointerdown',pd);
+return{score:0,
+step(dt,end){const _end=()=>{cv.removeEventListener('pointerdown',pd);removeEventListener('keydown',kd);end()};
+  t+=dt;flT=Math.max(0,flT-dt);
+  if(take('left'))cur.c=(cur.c+8)%9;if(take('right'))cur.c=(cur.c+1)%9;
+  if(take('up'))cur.r=(cur.r+8)%9;if(take('down'))cur.r=(cur.r+1)%9;
+  take('fire');take('up'); // drain taps/keys we handle ourselves
+  if(done){this.score=fin;done-=dt;if(done<=0)_end();return}
+  if(lost){lost-=dt;if(lost<=0)_end()}},
+draw(){clear();
+  txt(fmt(secs()),60,30,'#EDEDF5',18);txt('X '+mist+'/3',300,30,mist?'#FF6B6B':'#9A9AB5',18);
+  const sel=grid[cur.r][cur.c],sv=sel||0;
+  cx.fillStyle='#141824';cx.fillRect(BX,BY,CS*9,CS*9);
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){const x=BX+c*CS,y=BY+r*CS;
+    const sameBox=(r/3|0)===(cur.r/3|0)&&(c/3|0)===(cur.c/3|0);
+    if(r===cur.r||c===cur.c||sameBox){cx.fillStyle='rgba(125,211,252,.10)';cx.fillRect(x,y,CS,CS)}
+    if(sv&&grid[r][c]===sv){cx.fillStyle='rgba(125,211,252,.22)';cx.fillRect(x,y,CS,CS)}
+    if(r===cur.r&&c===cur.c){cx.fillStyle='rgba(251,191,36,.30)';cx.fillRect(x,y,CS,CS)}
+    if(flT>0&&r===fx&&c===fy){cx.fillStyle='rgba(255,60,60,.45)';cx.fillRect(x,y,CS,CS)}
+    if(grid[r][c])txt(grid[r][c],x+CS/2,y+CS/2+7,giv[r][c]?'#EDEDF5':'#7DD3FC',giv[r][c]?20:19);
+    else if(notes[r][c].size){cx.fillStyle='#9A9AB5';cx.font='10px system-ui';cx.textAlign='center';
+      for(const d of notes[r][c])cx.fillText(d,x+((d-1)%3)*11+12,y+(((d-1)/3)|0)*11+13)}}
+  cx.strokeStyle='rgba(255,255,255,.14)';cx.lineWidth=1;
+  for(let i=0;i<=9;i++){const p=BX+i*CS,q=BY+i*CS;
+    cx.strokeStyle=i%3?'rgba(255,255,255,.14)':'rgba(255,255,255,.45)';cx.lineWidth=i%3?1:2;
+    cx.beginPath();cx.moveTo(p,BY);cx.lineTo(p,BY+CS*9);cx.moveTo(BX,q);cx.lineTo(BX+CS*9,q);cx.stroke()}
+  for(let i=0;i<9;i++){const x=BX+i*CS,y=PY;let full=0;
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(grid[r][c]===i+1)full++;
+    cx.fillStyle=full>=9?'#232838':'#2E3B55';cx.fillRect(x+1,y,CS-2,36);
+    txt(i+1,x+CS/2,y+25,full>=9?'#555B70':'#EDEDF5',18)}
+  const btn=(x,l,act)=>{cx.fillStyle=act?'#3B6FE0':'#232838';cx.fillRect(x,BY2,156,40);
+    txt(l,x+78,BY2+27,act?'#fff':'#9A9AB5',15)};
+  btn(BX,'NOTE: '+(nm?'ON':'OFF'),nm);btn(186,'ERASE',false);
+  if(done)txt('SOLVED!',W/2,H/2,'#FBBF24',44);
+  if(lost)txt('3 MISTAKES',W/2,H/2,'#FF6B6B',34);
+  if(!done&&!lost&&t<3)txt('tap a cell, then 1-9',W/2,H-6,'#9A9AB5',13)}};
+};
+
+// ---------------------------------------------------------------------------
+// Ludo — ported from sausi-7/games (MIT). DOM rendering rewritten to canvas; logic faithful.
+// ---------------------------------------------------------------------------
+MAKERS.ludo=()=>{
+const COL=['#e84148','#00a859','#f7d842','#1f4cb9'];
+const LT=['#f6cdd0','#cdeeda','#fdf3c2','#ccd9f6'];
+const PN=['YOU','AI 1','AI 2','AI 3'];
+const RT=[];{let r=13,c=6,f=1;const LG=[[-1,0,5],[-1,-1,1],[0,-1,5],[-1,0,2],[0,1,5],[-1,1,1],[-1,0,5],[0,1,2],[1,0,5],[1,1,1],[0,1,5],[1,0,2],[0,-1,5],[1,-1,1],[1,0,5],[0,-1,2]];
+for(const q of LG)for(let i=0;i<q[2];i++){if(!f){r+=q[0];c+=q[1];}f=0;RT.push([r,c]);}}
+const HP=[[[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],[[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],[[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],[[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]]];
+const YD=[[[11,1],[11,3],[13,1],[13,3]],[[1,1],[1,3],[3,1],[3,3]],[[1,11],[1,13],[3,11],[3,13]],[[11,11],[11,13],[13,11],[13,13]]];
+const EN=[0,13,26,39],SAFE=[1,9,14,22,27,35,40,48],YO=[[0,9],[0,0],[9,0],[9,9]];
+const CS=22,BX=15,BY=46,DX=105,DY=392,DW=150,DH=52;
+const PX=c=>BX+(c+.5)*CS,PY=r=>BY+(r+.5)*CS;
+let tok=[[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1],[-1,-1,-1,-1]];
+let cur=0,dice=0,phase='roll',moves=[],sel=0,tmr=0,anim=null,over=null,msg='YOUR TURN - ROLL';
+let pcs=[];
+function cellOf(p,t){const s=tok[p][t];if(s<0)return YD[p][t];if(s<52)return RT[(EN[p]+s)%52];return HP[p][s-52];}
+function sim(p,t,d){const s=tok[p][t];if(s<0)return d===6?{ns:0,abs:EN[p]}:null;const ns=s+d;if(ns>57)return null;return ns<52?{ns:ns,abs:(EN[p]+ns)%52}:{ns:ns,abs:null};}
+function getMoves(p,d){const a=[];for(let t=0;t<4;t++){const s=sim(p,t,d);if(s)a.push({t:t,s:s});}return a;}
+function homeN(p){let n=0;for(let t=0;t<4;t++)if(tok[p][t]===57)n++;return n;}
+function oppOut(){let n=0;for(let p=1;p<4;p++)for(let t=0;t<4;t++){const s=tok[p][t];if(s>=0&&s<57)n++;}return n;}
+function doRoll(){dice=1+Math.floor(rnd(0,6));moves=getMoves(cur,dice);
+ if(!moves.length){msg='ROLLED '+dice+' - NO MOVE';phase='pass';tmr=1;}
+ else if(cur>0){doMove(pickAI());}else{phase='pick';sel=0;msg='ROLLED '+dice+' - PICK A PIECE';}}
+function pickAI(){let best=moves[0],bs=-1e9;for(const m of moves){let sc=m.s.ns*.6;
+ if(tok[cur][m.t]<0)sc+=40;if(m.s.ns===57)sc+=50;
+ if(m.s.abs!=null){if(SAFE.indexOf(m.s.abs)<0){for(let o=0;o<4;o++)if(o!==cur)for(let t=0;t<4;t++){const s=tok[o][t];if(s>=0&&s<52&&(EN[o]+s)%52===m.s.abs)sc+=60;}}else sc+=12;}
+ if(sc>bs||(sc===bs&&Math.random()<.5)){bs=sc;best=m;}}return best;}
+function doMove(m){anim={p:cur,t:m.t,to:m.s.ns,abs:m.s.abs};phase='anim';tmr=.12;msg='';}
+function hop(){const a=anim;const s=tok[a.p][a.t];tok[a.p][a.t]=s<0?0:s+1;
+ if(tok[a.p][a.t]>=a.to){anim=null;afterMove(a);}}
+function afterMove(a){const p=a.p;
+ if(a.abs!=null&&a.to<52&&SAFE.indexOf(a.abs)<0){let hit=false;
+  for(let o=0;o<4;o++)if(o!==p)for(let t=0;t<4;t++){const s=tok[o][t];
+   if(s>=0&&s<52&&(EN[o]+s)%52===a.abs){tok[o][t]=-1;hit=true;}}
+  if(hit)msg='CAPTURE!';}
+ if(homeN(p)===4){over={win:p===0,t:2};phase='over';msg=p===0?'YOU WIN!':PN[p]+' WINS';return;}
+ if(dice===6){if(p===0){phase='roll';msg='ROLLED 6 - GO AGAIN';}else{phase='ai';tmr=.7;}}
+ else nextTurn();}
+function nextTurn(){cur=(cur+1)%4;msg='';
+ if(cur===0){phase='roll';msg='YOUR TURN - ROLL';}else{phase='ai';tmr=.8;}}
+function tap(e){if(over)return;const b=cv.getBoundingClientRect();
+ const x=(e.clientX-b.left)*W/b.width,y=(e.clientY-b.top)*H/b.height;
+ if(phase==='roll'&&x>DX&&x<DX+DW&&y>DY&&y<DY+DH){doRoll();return;}
+ if(phase==='pick')for(const q of pcs){if(q.p!==cur)continue;const dx=x-q.x,dy=y-q.y;
+  if(dx*dx+dy*dy<144){const m=moves.find(z=>z.t===q.t);if(m){doMove(m);return;}}}}
+cv.addEventListener('pointerdown',tap);
+function T(s,x,y,col,size){cx.fillStyle=col;cx.font='bold '+size+'px system-ui,sans-serif';cx.fillText(s,x,y);}
+const g={score:0,
+step(dt,end){const fin=()=>{cv.removeEventListener('pointerdown',tap);end();};
+ if(over){over.t-=dt;if(over.t<=0){g.score=over.win?1000+50*oppOut():100*homeN(0);fin();}return;}
+ if(phase==='roll'&&take('fire'))doRoll();
+ else if(phase==='pick'){if(take('left'))sel=(sel+moves.length-1)%moves.length;
+  if(take('right'))sel=(sel+1)%moves.length;if(take('fire'))doMove(moves[sel]);}
+ if(phase==='ai'){tmr-=dt;if(tmr<=0)doRoll();}
+ else if(phase==='pass'){tmr-=dt;if(tmr<=0)nextTurn();}
+ else if(phase==='anim'&&anim){tmr-=dt;while(tmr<=0&&anim){tmr+=.09;hop();}}
+ g.score=100*homeN(0);},
+draw(){clear();pcs=[];
+ cx.textAlign='center';cx.textBaseline='middle';
+ cx.fillStyle='#0e1626';cx.fillRect(0,0,W,44);
+ T(PN[cur]+(cur===0?' - YOUR TURN':' IS THINKING'),W/2,15,'#fff',14);
+ T(msg,W/2,33,'#9fb3d1',11);
+ for(let p=0;p<4;p++){const ox=BX+YO[p][0]*CS,oy=BY+YO[p][1]*CS;
+  cx.fillStyle=COL[p];cx.fillRect(ox,oy,CS*6,CS*6);
+  cx.fillStyle='#f7f9fc';cx.fillRect(ox+CS,oy+CS,CS*4,CS*4);}
+ for(const c of RT){cx.fillStyle='#eef1f6';cx.fillRect(BX+c[1]*CS+.5,BY+c[0]*CS+.5,CS-1,CS-1);}
+ for(let p=0;p<4;p++){cx.fillStyle=LT[p];for(const c of HP[p])cx.fillRect(BX+c[1]*CS+.5,BY+c[0]*CS+.5,CS-1,CS-1);}
+ cx.fillStyle='#33415c';for(const i of SAFE)cx.fillRect(PX(RT[i][1])-2,PY(RT[i][0])-2,4,4);
+ for(let p=0;p<4;p++){cx.strokeStyle=COL[p];cx.lineWidth=2;cx.beginPath();cx.arc(PX(RT[EN[p]][1]),PY(RT[EN[p]][0]),7,0,7);cx.stroke();}
+ const zx=BX+6*CS,zy=BY+6*CS,zs=3*CS,hx=zx+zs/2,hy=zy+zs/2;
+ cx.fillStyle='#101826';cx.fillRect(zx,zy,zs,zs);
+ const tri=(x1,y1,x2,y2,col)=>{cx.fillStyle=col;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.lineTo(hx,hy);cx.closePath();cx.fill();};
+ tri(zx,zy,zx+zs,zy,COL[3]);tri(zx+zs,zy,zx+zs,zy+zs,COL[2]);tri(zx+zs,zy+zs,zx,zy+zs,COL[0]);tri(zx,zy+zs,zx,zy,COL[1]);
+ const grp={};for(let p=0;p<4;p++)for(let t=0;t<4;t++){const c=cellOf(p,t),k=c[0]*15+c[1];(grp[k]=grp[k]||[]).push([p,t]);}
+ for(const k in grp){const a=grp[k],n=a.length;
+  a.forEach((pt,i)=>{const p=pt[0],t=pt[1],c=cellOf(p,t);
+   const ox=n>1?((i%2)-.5)*CS*.6:0,oy=n>1?(((i/2)|0)-.5)*CS*.6:0;
+   const x=PX(c[1])+ox,y=PY(c[0])+oy,rad=n>1?CS*.24:CS*.32;
+   const mv=phase==='pick'&&p===cur&&moves.some(m=>m.t===t);
+   cx.fillStyle=COL[p];cx.beginPath();cx.arc(x,y,rad,0,7);cx.fill();
+   cx.lineWidth=2;cx.strokeStyle='#fff';cx.stroke();
+   if(mv){const isSel=moves[sel]&&moves[sel].t===t;
+    cx.lineWidth=isSel?3:1.5;cx.strokeStyle=isSel?'#fff':'#ffd24a';
+    cx.beginPath();cx.arc(x,y,rad+3.5,0,7);cx.stroke();}
+   pcs.push({p:p,t:t,x:x,y:y});});}
+ cx.fillStyle=phase==='roll'?'#1f4cb9':'#24314d';
+ cx.beginPath();if(cx.roundRect)cx.roundRect(DX,DY,DW,DH,12);else cx.rect(DX,DY,DW,DH);cx.fill();
+ T(phase==='roll'?'ROLL':'DICE '+dice,W/2,DY+DH/2,'#fff',20);
+ T('tap ROLL / SPACE - tap a glowing piece to move it',W/2,DY+DH+13,'#9fb3d1',10);
+ if(over){cx.fillStyle='rgba(5,8,16,.78)';cx.fillRect(0,0,W,H);
+  T(msg,W/2,H/2-16,over.win?'#ffd24a':'#ff7a7a',30);
+  T('SCORE '+g.score,W/2,H/2+22,'#fff',16);}}};
+return g;};
+
+// ---------------------------------------------------------------------------
+// Street Football — ported from sausi-7/games football (MIT); rebranded from "Sports Heads"-style clone.
+// Mechanics faithful; code and art rewritten.
+// ---------------------------------------------------------------------------
+MAKERS.streetball=()=>{
+const W=360,H=480,F=400,GW=26,GH=92,BAR=F-GH,GRAV=1500;
+const mk=(x,dir)=>({x,y:F-24,vx:0,vy:0,r:24,onG:true,kt:0,dir});
+const me=mk(90,1),ai=mk(270,-1);
+const ball={x:180,y:F-12,vx:0,vy:0,r:12};
+let gp=0,ga=0,t=60,pause=0,fx=0;
+const pts=new Set();
+const pDown=e=>{pts.add(e.pointerId);if(pts.size===2&&me.onG&&pause<=0){me.vy=-520;me.onG=false;}};
+const pUp=e=>pts.delete(e.pointerId);
+cv.addEventListener('pointerdown',pDown);cv.addEventListener('pointerup',pUp);cv.addEventListener('pointercancel',pUp);
+const clean=()=>{cv.removeEventListener('pointerdown',pDown);cv.removeEventListener('pointerup',pUp);cv.removeEventListener('pointercancel',pUp);};
+const kick=p=>{const fx2=p.x+p.dir*16,fy=F-6,dx=ball.x-fx2,dy=ball.y-fy;
+ if(ball.y<F-90||dx*dx+dy*dy>(p.r+ball.r+26)*(p.r+ball.r+26))return;
+ ball.vx=p.dir*380;ball.vy=-380;p.kt=.18;};
+const phys=p=>{p.vy+=GRAV*DT;p.x+=p.vx*DT;p.y+=p.vy*DT;
+ if(p.y+p.r>F){p.y=F-p.r;p.vy=0;p.onG=true;}else p.onG=false;
+ if(p.x-p.r<0){p.x=p.r;p.vx=0;}if(p.x+p.r>W){p.x=W-p.r;p.vx=0;}};
+const bphys=()=>{const b=ball;b.vy+=GRAV*DT;b.x+=b.vx*DT;b.y+=b.vy*DT;
+ if(b.y+b.r>F){b.y=F-b.r;b.vy*=-.7;b.vx*=.98;}
+ for(let s=0;s<2;s++){const gx=s?W-GW:0;
+  if(b.vy>0&&b.y-b.r<BAR&&b.y+b.r>=BAR&&b.x>gx-2&&b.x<gx+GW+2){b.y=BAR-b.r;b.vy*=-.7;}}
+ if(b.x-b.r<0&&b.y<BAR){b.x=b.r;b.vx*=-.7;}
+ if(b.x+b.r>W&&b.y<BAR){b.x=W-b.r;b.vx*=-.7;}};
+const bump=p=>{const dx=ball.x-p.x,dy=ball.y-p.y,d=Math.hypot(dx,dy)||1,m=p.r+ball.r;
+ if(d<m){const nx=dx/d,ny=dy/d,o=m-d;p.x-=nx*o*.5;p.y-=ny*o*.5;ball.x+=nx*o*.5;ball.y+=ny*o*.5;
+  const rv=(ball.vx-p.vx)*nx+(ball.vy-p.vy)*ny;
+  if(rv<0){ball.vx-=nx*rv*1.2;ball.vy-=ny*rv*1.2;}}};
+const reset=()=>{me.x=90;me.y=F-24;me.vx=me.vy=0;ai.x=270;ai.y=F-24;ai.vx=ai.vy=0;ball.x=180;ball.y=F-12;ball.vx=ball.vy=0;};
+let DT=.016;
+const drawP=(p,c,dark)=>{const f=p.kt>0?1:0;
+ cx.strokeStyle=dark;cx.lineWidth=7;cx.lineCap='round';
+ cx.beginPath();cx.moveTo(p.x,F-4);cx.lineTo(p.x+p.dir*(10+f*16),F-10);cx.stroke();
+ cx.fillStyle=c;cx.fillRect(p.x-14,p.y+6,28,22);
+ cx.fillStyle='#fbbf72';cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fill();
+ cx.fillStyle=c;cx.fillRect(p.x-p.r,p.y-14,p.r*2,9);
+ cx.fillStyle='#fff';cx.beginPath();cx.arc(p.x+p.dir*9,p.y-2,6,0,7);cx.fill();
+ cx.fillStyle='#0f172a';cx.beginPath();cx.arc(p.x+p.dir*10,p.y-2,2.6,0,7);cx.fill();
+ cx.strokeStyle='#7c2d12';cx.lineWidth=2;cx.beginPath();cx.arc(p.x+p.dir*4,p.y+8,7,.3,2.8);cx.stroke();};
+const goal=s=>{const gx=s?W-GW:0;
+ cx.strokeStyle='#e2e8f0';cx.lineWidth=5;cx.beginPath();
+ if(s){cx.moveTo(W,F);cx.lineTo(W,BAR);cx.lineTo(gx,BAR);}else{cx.moveTo(0,F);cx.lineTo(0,BAR);cx.lineTo(gx+GW,BAR);}
+ cx.stroke();cx.strokeStyle='rgba(226,232,240,.25)';cx.lineWidth=1;
+ for(let i=1;i<5;i++){const ny=BAR+i*(GH/5);cx.beginPath();cx.moveTo(s?W:0,ny);cx.lineTo(s?gx:gx+GW,ny);cx.stroke();}};
+const g={score:0,
+step(dt,end){DT=Math.min(dt,.033);
+ if(t>0&&pause<=0){t-=dt;if(t<=0){t=0;clean();end();return;}}
+ if(pause>0){pause-=dt;if(pause<=0)reset();}
+ let mv=0;if(K.left)mv--;if(K.right)mv++;
+ if(mv===0&&drag!=null){const d=drag.x-me.x;if(Math.abs(d)>8)mv=d>0?1:-1;}
+ me.vx=mv*150;if(mv)me.dir=mv;
+ if(take('up')&&me.onG&&pause<=0){me.vy=-520;me.onG=false;}
+ if(take('fire'))kick(me);
+ ai.vx=0;
+ if(pause<=0&&t>0){let tx=280;if(ball.x>190)tx=ball.x+8;
+  const d=tx-ai.x;if(Math.abs(d)>6){ai.vx=(d>0?1:-1)*125;ai.dir=d>0?1:-1;}
+  if(ai.onG&&ball.y<ai.y-10&&ball.vy>0&&Math.abs(ball.x-ai.x)<60)ai.vy=-495;
+  if(ai.kt<=0&&ball.y>F-90&&Math.abs(ball.x-ai.x)<58&&ball.x>170)kick(ai);}
+ phys(me);phys(ai);bphys();bump(me);bump(ai);
+ if(pause<=0){
+  if(ball.x-ball.r<=2&&ball.y>=BAR&&ball.y<=F){ga++;pause=1.4;fx=1.4;}
+  else if(ball.x+ball.r>=W-2&&ball.y>=BAR&&ball.y<=F){gp++;pause=1.4;fx=1.4;}}
+ if(fx>0)fx-=dt;
+ me.kt=Math.max(0,me.kt-dt);ai.kt=Math.max(0,ai.kt-dt);
+ g.score=gp*100-ga*25+(t<=0&&gp>ga?25:0);},
+draw(){clear();
+ const gr=cx.createLinearGradient(0,F,0,H);gr.addColorStop(0,'#15803d');gr.addColorStop(1,'#14532d');
+ cx.fillStyle=gr;cx.fillRect(0,F,W,H-F);
+ cx.strokeStyle='rgba(255,255,255,.35)';cx.lineWidth=2;
+ cx.beginPath();cx.moveTo(180,F);cx.lineTo(180,H);cx.stroke();
+ cx.beginPath();cx.arc(180,F+40,34,0,7);cx.stroke();
+ goal(0);goal(1);
+ drawP(me,'#22d3ee','#164e63');drawP(ai,'#fb923c','#7c2d12');
+ cx.fillStyle='#f8fafc';cx.beginPath();cx.arc(ball.x,ball.y,ball.r,0,7);cx.fill();
+ cx.fillStyle='#0f172a';cx.beginPath();cx.arc(ball.x,ball.y,4,0,7);cx.fill();
+ txt(gp+' : '+ga,180,14,'#ffffff',26);
+ const s=Math.ceil(t);
+ txt('0:'+String(s%60).padStart(2,'0'),180,44,s<=10?'#f87171':'#cbd5e1',16);
+ txt('YOU',14,14,'#67e8f9',12);txt('CPU',346,14,'#fdba74',12);
+ txt('STREET FOOTBALL',180,H-10,'rgba(255,255,255,.4)',11);
+ if(fx>0)txt('GOAL!',180,200,'#fde047',44);}};
+return g;};
