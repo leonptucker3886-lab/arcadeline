@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcadeline — original arcade games with leaderboards</title>
+<meta name="description" content="Original arcade games inspired by the classics. Free account, global leaderboards, personal bests.">
+<link rel="stylesheet" href="style.css?v=fx3">
+<script>addEventListener("error",e=>{const o=document.getElementById("overlay");if(o){o.hidden=false;o.innerHTML="<p>Something went wrong loading the game.<br>Please refresh the page.</p><small>"+(e.message||"")+"</small>"}});</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head><body>
+<header><div class="wrap hbar"><a class="logo" href="#" onclick="go('home');return false">Arcadeline</a><a href="https://afterglow.leonlink.net" style="margin-left:auto;margin-right:10px;padding:8px 14px;border-radius:99px;border:1px solid #26263d;background:rgba(255,255,255,.05);color:#ffd166;font:700 13px/1 sans-serif;text-decoration:none;white-space:nowrap">🎰 Casino</a><div id="who"></div></div>
+<nav class="snav wrap" aria-label="Leonlink"><a href="https://www.leonlink.net/">Home</a><a href="https://www.leonlink.net/games.html">Games</a><a href="https://www.leonlink.net/software.html">Software</a><a href="https://www.leonlink.net/blog.html">Blog</a><a href="https://www.leonlink.net/watchline/">Watchline</a><a href="https://afterglow.leonlink.net" class="casino">&#127920; Casino</a><a href="#" class="on" onclick="go('home');return false">&#128126; Arcade</a><a href="https://www.leonlink.net/hire-me.html" class="fire">&#128293; Hire me</a></nav></header>
+<main class="wrap">
+<section id="v-home">
+ <div class="hero"><h1>Classic arcade. <em>Original games.</em></h1><p>Eight games, six brand-new takes on the classics. Free account, global leaderboards, personal bests — plus XP levels, badges and Glow to spend on profile rewards.</p></div>
+ <div id="games" class="grid"></div>
+</section>
+<section id="v-play" hidden>
+ <div class="playhead"><button class="ghost" onclick="stopGame();history.replaceState(null,'',location.pathname);go('home')">← Games</button><h2 id="gtitle"></h2><div class="sc">Score <b id="score">0</b> · Best <b id="best">–</b></div></div>
+ <div class="stage"><canvas id="cv" width="360" height="480"></canvas><div id="overlay" class="overlay"></div></div>
+ <div class="pad" id="pad">
+  <button data-k="left">◀</button><button data-k="up">▲</button><button data-k="down">▼</button><button data-k="right">▶</button><button data-k="fire" class="fire">●</button>
+ </div>
+ <p class="hint" id="hint"></p>
+ <h3>Leaderboard — top 20</h3><ol id="lb" class="lb"></ol>
+</section>
+<section id="v-profile" hidden>
+ <div class="phead"><button class="ghost" onclick="go('home')">← Games</button></div>
+ <div class="card pcard"><div id="pav" class="av big"></div><div class="pinfo"><h2 id="pname"></h2><div id="ptitle" class="small"></div>
+ <div class="lvl"><span id="plvl"></span><div class="bar"><i id="pbar"></i></div><span id="pxp" class="small"></span></div>
+ <div class="chips"><span class="chip">🪙 <b id="ptok">0</b> Glow</span><span class="chip">🔥 <b id="pstreak">0</b>-day streak</span><button id="dbtn" onclick="claimDaily()">Claim daily bonus</button></div><p class="msg" id="pmsg2"></p></div></div>
+ <h3>Badges</h3><div id="badges" class="badges"></div>
+ <h3>Reward shop</h3><p class="small">Earn Glow by saving scores (bigger scores and personal bests pay more), claiming your daily bonus and levelling up.</p><div id="shop"></div>
+</section>
+<section id="v-auth" hidden>
+ <div class="card narrow"><h2 id="atitle">Sign in to save scores</h2>
+ <input id="em" type="email" placeholder="Email" autocomplete="email"><input id="pw" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
+ <button onclick="auth()" id="abtn">Sign in</button><p class="small"><a href="#" onclick="flip();return false" id="aflip">New here? Create a free account</a></p><p class="msg" id="amsg"></p></div>
+</section>
+<section id="v-nick" hidden>
+ <div class="card narrow"><h2>Pick your leaderboard name</h2><p class="small">3–16 letters, numbers or _</p><input id="nick" maxlength="16" placeholder="Nickname"><button onclick="saveNick()">Save</button><p class="msg" id="nmsg"></p></div>
+</section>
+</main>
+<footer class="wrap small">Arcadeline · part of the Line Suite by LeonLink · Original games inspired by arcade classics.</footer>
+<script src="app.js?v=fx3"></script><script src="games.js?v=fx3"></script>
+<nav class="bnav" aria-label="Quick navigation"><a href="https://www.leonlink.net/">&#127968;<span>Home</span></a><a href="https://www.leonlink.net/games.html">&#127918;<span>Games</span></a><a href="#" class="on" onclick="go('home');return false">&#128126;<span>Arcade</span></a><a href="https://afterglow.leonlink.net">&#127920;<span>Casino</span></a><a href="https://www.leonlink.net/software.html">&#9638;<span>Software</span></a></nav>
+</body></html>
