@@ -58,6 +58,12 @@ header{padding:10px 0 0}#who{flex-wrap:wrap;justify-content:flex-end;min-width:0
 .pad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px auto;max-width:480px;position:sticky;bottom:calc(64px + env(safe-area-inset-bottom));z-index:4}
 .pad button{min-height:60px;font-size:24px;border-radius:14px}
 .pad button:active{background:var(--ac);transform:scale(.96)}
+.modechip{display:inline-block;font:700 11px/1.2 system-ui;padding:5px 10px;border-radius:99px;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.modechip.glow{background:rgba(251,191,36,.14);border:1px solid #fbbf24;color:#fbbf24}
+.modechip.practice{background:rgba(154,154,181,.10);border:1px solid #5a5a72;color:#9a9ab5}
+.modebtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.stake-note{opacity:.75;margin-top:10px}
+.overlay .modechip{margin-left:0}
 .hint{font-size:13px}.overlay button{min-height:48px;min-width:160px}
 }
 body.playing{overscroll-behavior:none}body.playing .stage,body.playing .pad{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
