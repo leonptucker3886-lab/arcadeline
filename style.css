@@ -61,3 +61,17 @@ header{padding:10px 0 0}#who{flex-wrap:wrap;justify-content:flex-end;min-width:0
 .hint{font-size:13px}.overlay button{min-height:48px;min-width:160px}
 }
 body.playing{overscroll-behavior:none}body.playing .stage,body.playing .pad{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* landscape phones: game fills height, controls float at the sides */
+@media(orientation:landscape) and (max-height:540px) and (pointer:coarse){
+body:has(#v-play:not([hidden])) header,body:has(#v-play:not([hidden])) .bnav,body:has(#v-play:not([hidden])) footer,body:has(#v-play:not([hidden])) .snav{display:none}
+body:has(#v-play:not([hidden])){padding-bottom:0}
+body:has(#v-play:not([hidden])) .playhead{padding:4px 0;gap:8px}body:has(#v-play:not([hidden])) .playhead h2{font-size:15px}body:has(#v-play:not([hidden])) .playhead .ghost{min-height:36px;padding:6px 10px}
+body:has(#v-play:not([hidden])) .stage{width:auto;height:calc(100dvh - 54px);aspect-ratio:3/4;max-width:none}
+body:has(#v-play:not([hidden])) .pad{position:fixed;inset:0;display:block;pointer-events:none;margin:0;max-width:none;z-index:4}
+body:has(#v-play:not([hidden])) .pad button{position:absolute;pointer-events:auto;width:62px;height:62px;min-height:0;padding:0;border-radius:50%;opacity:.9;font-size:22px}
+body:has(#v-play:not([hidden])) .pad [data-k=left]{left:calc(14px + env(safe-area-inset-left));bottom:84px}
+body:has(#v-play:not([hidden])) .pad [data-k=right]{left:calc(150px + env(safe-area-inset-left));bottom:84px}
+body:has(#v-play:not([hidden])) .pad [data-k=up]{left:calc(82px + env(safe-area-inset-left));bottom:152px}
+body:has(#v-play:not([hidden])) .pad [data-k=down]{left:calc(82px + env(safe-area-inset-left));bottom:16px}
+body:has(#v-play:not([hidden])) .pad .fire{right:calc(24px + env(safe-area-inset-right));bottom:60px;width:88px;height:88px;font-size:30px}
+}
