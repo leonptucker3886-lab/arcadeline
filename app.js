@@ -68,5 +68,5 @@ async function renderProfile(){const p=P;if(!p)return;const lv=p.lvl,lo=50*(lv-1
   return `<div class="it ${on?'eq':''}"><div class="pv">${pv}</div>${esc(i.name)}${btn}</div>`}).join('')}</div>`).join('')}
 async function act(fn,args,ok){const {data,error}=await sb.rpc(fn,args);$('pmsg2').textContent=error?error.message:(typeof ok==='function'?ok(data):ok);await loadUser();renderProfile()}
 const buy=id=>act('arc_buy',{p_item:id},'Unlocked! Tap Equip to wear it.'),equip=id=>act('arc_equip',{p_item:id},'Equipped.'),unequip=k=>act('arc_unequip',{p_kind:k},'Removed.');
-const claimDaily=()=>act('arc_daily',{},d=>d.claimed?`+${d.tokens} tokens \u00b7 ${d.streak}-day streak`:'Already claimed today.');
+const claimDaily=()=>act('arc_daily',{},d=>d.claimed?`+${d.tokens} Glow \u00b7 ${d.streak}-day streak`:'Already claimed today.');
 loadCat().then(loadUser);
