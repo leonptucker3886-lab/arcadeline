@@ -1,23 +1,23 @@
 const cv=document.getElementById('cv'),cx=cv.getContext('2d'),W=360,H=480;
-const K={left:0,right:0,up:0,down:0,fire:0},P={};let loop=null,G=null;
+const K={left:0,right:0,up:0,down:0,fire:0},PK={};let loop=null,G=null;
 const KM={ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right',ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',' ':'fire'};
-addEventListener('keydown',e=>{const k=KM[e.key];if(k&&G){if(!K[k])P[k]=1;K[k]=1;e.preventDefault()}});
+addEventListener('keydown',e=>{const k=KM[e.key];if(k&&G){if(!K[k])PK[k]=1;K[k]=1;e.preventDefault()}});
 addEventListener('keyup',e=>{const k=KM[e.key];if(k)K[k]=0});
 document.querySelectorAll('#pad button').forEach(b=>{const k=b.dataset.k;
- b.addEventListener('pointerdown',e=>{e.preventDefault();K[k]=1;P[k]=1});['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,()=>K[k]=0))});
+ b.addEventListener('pointerdown',e=>{e.preventDefault();K[k]=1;PK[k]=1});['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,()=>K[k]=0))});
 let tx=null,ty=null,drag=null;cv.style.touchAction='none';
 cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();tx=e.clientX;ty=e.clientY;drag=(e.clientX-r.left)*W/r.width});
 cv.addEventListener('pointermove',e=>{if(tx==null)return;const r=cv.getBoundingClientRect();drag=(e.clientX-r.left)*W/r.width});
 cv.addEventListener('pointerup',e=>{if(tx==null)return;const dx=e.clientX-tx,dy=e.clientY-ty;
- if(Math.max(Math.abs(dx),Math.abs(dy))>25){const k=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');P[k]=1}else P.fire=1;tx=null;drag=null});
-const take=k=>{const v=P[k];P[k]=0;return v};
+ if(Math.max(Math.abs(dx),Math.abs(dy))>25){const k=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');PK[k]=1}else PK.fire=1;tx=null;drag=null});
+const take=k=>{const v=PK[k];PK[k]=0;return v};
 const rnd=(a,b)=>a+Math.random()*(b-a);
 function txt(s,x,y,c='#EDEDF5',sz=16){cx.fillStyle=c;cx.font=`bold ${sz}px system-ui`;cx.textAlign='center';cx.fillText(s,x,y)}
 function clear(){cx.fillStyle='#0B0B14';cx.fillRect(0,0,W,H)}
 function setScore(s){document.getElementById('score').textContent=s}
 function stopGame(){if(loop)cancelAnimationFrame(loop);loop=null;G=null}
 function gameErr(e){stopGame();const o=document.getElementById('overlay');if(o){o.hidden=false;o.innerHTML='<p>Game failed to start.</p><small>'+String(e&&e.message||e)+'</small><button onclick="location.reload()">Reload</button>'}}
-function startGame(id,over){stopGame();for(const k in P)P[k]=0;if(!MAKERS[id])return gameErr('Missing game '+id+' (old cached files). Reload the page.');let g;try{g=MAKERS[id]()}catch(e){return gameErr(e)}G=g;const t0=performance.now();let last=t0;
+function startGame(id,over){stopGame();for(const k in PK)PK[k]=0;if(!MAKERS[id])return gameErr('Missing game '+id+' (old cached files). Reload the page.');let g;try{g=MAKERS[id]()}catch(e){return gameErr(e)}G=g;const t0=performance.now();let last=t0;
  const end=()=>{const s=g.score;stopGame();over(s,(performance.now()-t0)/1000)};
  const f=now=>{try{fr(now)}catch(e){gameErr(e)}};const fr=now=>{if(G!==g)return;const dt=Math.min(.05,(now-last)/1000);last=now;g.step(dt,end);if(G!==g)return;clear();g.draw();setScore(g.score);loop=requestAnimationFrame(f)};
  loop=requestAnimationFrame(f)}
@@ -47,9 +47,9 @@ MAKERS.bricks=()=>{const cols=8,bw=W/cols;let bricks,lvl=1,px=W/2,pw=70,b,stuck=
 MAKERS.rocks=()=>{let s={x:W/2,y:H/2,a:-Math.PI/2,vx:0,vy:0,inv:2},shots=[],rocks=[],cool=0,lives=3,wave=0;
  const spawn=()=>{wave++;for(let i=0;i<2+wave;i++){let x,y;do{x=rnd(0,W);y=rnd(0,H)}while(Math.hypot(x-s.x,y-s.y)<130);const a=rnd(0,7),v=rnd(30,55+wave*8);rocks.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:34,sh:Array.from({length:9},()=>rnd(.75,1.15))})}};spawn();
  const wrap=o=>{o.x=(o.x+W)%W;o.y=(o.y+H)%H};
- return{score:0,step(dt,end){s.a+=(K.right-K.left)*4.2*dt;P.left=P.right=P.up=0;
+ return{score:0,step(dt,end){s.a+=(K.right-K.left)*4.2*dt;PK.left=PK.right=PK.up=0;
   if(K.up){s.vx+=Math.cos(s.a)*220*dt;s.vy+=Math.sin(s.a)*220*dt}s.vx*=.992;s.vy*=.992;s.x+=s.vx*dt;s.y+=s.vy*dt;wrap(s);s.inv-=dt;cool-=dt;
-  if((K.fire||P.fire)&&cool<=0){shots.push({x:s.x,y:s.y,vx:Math.cos(s.a)*420+s.vx,vy:Math.sin(s.a)*420+s.vy,t:.85});cool=.22;P.fire=0}
+  if((K.fire||PK.fire)&&cool<=0){shots.push({x:s.x,y:s.y,vx:Math.cos(s.a)*420+s.vx,vy:Math.sin(s.a)*420+s.vy,t:.85});cool=.22;PK.fire=0}
   shots.forEach(o=>{o.x+=o.vx*dt;o.y+=o.vy*dt;o.t-=dt;wrap(o)});rocks.forEach(o=>{o.x+=o.vx*dt;o.y+=o.vy*dt;wrap(o)});
   for(const o of shots)for(let i=0;i<rocks.length;i++){const r=rocks[i];if(o.t>0&&Math.hypot(o.x-r.x,o.y-r.y)<r.r){o.t=0;rocks.splice(i,1);this.score+=r.r>30?20:r.r>15?50:100;
    if(r.r>12)for(let j=0;j<2;j++){const a=rnd(0,7),v=rnd(50,110);rocks.push({x:r.x,y:r.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:r.r/2,sh:r.sh})}break}}
@@ -63,7 +63,7 @@ MAKERS.rocks=()=>{let s={x:W/2,y:H/2,a:-Math.PI/2,vx:0,vy:0,inv:2},shots=[],rock
 MAKERS.invaders=()=>{let px=W/2,shots=[],bombs=[],al=[],dir=1,spd=30,cool=0,lives=3,wave=0;
  const spawn=()=>{wave++;al=[];for(let r=0;r<4;r++)for(let c=0;c<7;c++)al.push({x:40+c*40,y:60+r*32,r});spd=28+wave*8};spawn();
  return{score:0,step(dt,end){if(drag!=null)px=drag;px+=(K.right-K.left)*260*dt;px=Math.max(16,Math.min(W-16,px));cool-=dt;
-  if((K.fire||P.fire)&&cool<=0){shots.push({x:px,y:H-44});cool=.4;P.fire=0}
+  if((K.fire||PK.fire)&&cool<=0){shots.push({x:px,y:H-44});cool=.4;PK.fire=0}
   shots.forEach(o=>o.y-=420*dt);bombs.forEach(o=>o.y+=(150+wave*15)*dt);
   const sp=spd*(1+(28-al.length)/14);let edge=false;al.forEach(a=>{a.x+=dir*sp*dt;if(a.x<16||a.x>W-16)edge=true});
   if(edge){dir*=-1;al.forEach(a=>{a.x+=dir*sp*dt*2;a.y+=14})}
@@ -90,7 +90,7 @@ MAKERS.blocks=()=>{const C=20,COLS=10,ROWS=22,ox=40,oy=20;
    me.score+=[0,40,100,300,800][n]*lvl;lines+=n;lvl=1+Math.floor(lines/10);if(!next())end()};
   if(take('left')&&fits(pc.c,pc.x-1,pc.y))pc.x--;if(take('right')&&fits(pc.c,pc.x+1,pc.y))pc.x++;
   if(take('up')){const r=rot(pc.c);for(const k of[0,-1,1,-2,2])if(fits(r,pc.x+k,pc.y)){pc.c=r;pc.x+=k;break}}
-  if(take('fire')){while(fits(pc.c,pc.x,pc.y+1)){pc.y++;me.score+=1}place();return}P.down=0;
+  if(take('fire')){while(fits(pc.c,pc.x,pc.y+1)){pc.y++;me.score+=1}place();return}PK.down=0;
   acc+=dt*(K.down?12:1);const iv=Math.max(.08,.8-(lvl-1)*.07);
   if(acc>=iv){acc=0;if(fits(pc.c,pc.x,pc.y+1)){pc.y++;if(K.down)me.score+=1}else place()}},
   draw(){cx.fillStyle='#151526';cx.fillRect(ox,oy,COLS*C,ROWS*C);
@@ -120,9 +120,9 @@ MAKERS.boxing=()=>{
  begin();
  return{score:0,step(dt,end){const me=this;clock+=dt;mt-=dt;shake=Math.max(0,shake-dt*20);
   fx.forEach(f=>{f.t-=dt;f.y-=30*dt});fx=fx.filter(f=>f.t>0);
-  if(st==='intro'){t-=dt;for(const k in P)P[k]=0;if(t<=0){nextIdle();say('FIGHT!',.8)}return}
-  if(st==='ko'){t-=dt;for(const k in P)P[k]=0;if(t<=0){oi++;if(oi>=OPP.length){me.score+=2000;return end()}ph=Math.min(100,ph+50);begin()}return}
-  if(st==='down'){t-=dt;for(const k in P)P[k]=0;if(t<=0)return end();return}
+  if(st==='intro'){t-=dt;for(const k in PK)PK[k]=0;if(t<=0){nextIdle();say('FIGHT!',.8)}return}
+  if(st==='ko'){t-=dt;for(const k in PK)PK[k]=0;if(t<=0){oi++;if(oi>=OPP.length){me.score+=2000;return end()}ph=Math.min(100,ph+50);begin()}return}
+  if(st==='down'){t-=dt;for(const k in PK)PK[k]=0;if(t<=0)return end();return}
   fightT+=dt;
   const ko=()=>{eh=0;st='ko';t=2.8;me.score+=300+Math.round(ph*3)+Math.max(0,Math.round((90-fightT)*3));say('K.O.!',2.6);shake=8};
   const punch=(m,kind)=>{const x=W/2+(kind==='lo'?rnd(-10,10):rnd(-25,25)),y=kind==='lo'?250:185;
