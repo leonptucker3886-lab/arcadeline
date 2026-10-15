@@ -83,7 +83,11 @@ async function startRun(m){runMode=m;
  }
  if(typeof window!=='undefined')window.GL_RUN_MODE=m;   // games.js daily maker reads this
  overlay('');setChip(m);{const t=$('tchip');if(t){if(ACT&&ACT.g===cur.id){t.hidden=false;t.textContent='TARGET '+ACT.s}else t.hidden=true}}startGame(cur.id,onOver)}
-async function onOver(score,dur){let msg='';
+function llTrack(){try{if(!window.LLProfile)return;LLProfile.init('arcadeline');LLProfile.unlock('first_play');
+ const k='arc_ll_played',p=JSON.parse(localStorage.getItem(k)||'[]');if(p.indexOf(cur.id)<0){p.push(cur.id);localStorage.setItem(k,JSON.stringify(p))}if(p.length>=5)LLProfile.unlock('five_games');
+ if(cur.id==='dailysudoku'){const d=new Date().toISOString().slice(0,10),s=JSON.parse(localStorage.getItem('arc_ll_daily')||'{}');if(s.last!==d){const y=new Date(Date.now()-864e5).toISOString().slice(0,10);s.n=s.last===y?(s.n||0)+1:1;s.last=d;localStorage.setItem('arc_ll_daily',JSON.stringify(s))}if(s.n>=3)LLProfile.unlock('daily_streak_3')}}catch(e){}}
+function llScore(s){try{if(window.LLProfile&&s>0)LLProfile.score(s)}catch(e){}}
+async function onOver(score,dur){let msg='';llTrack();llScore(score);
  const glow=runMode==='glow';
  const wasChal=(ACT&&ACT.g===cur.id)?ACT:null;ACT=null;
  const verdict=wasChal?`<p class="verdict${score>=wasChal.s?' win':''}">${score>=wasChal.s?'Challenge beaten by '+(score-wasChal.s)+'!':'Short by '+(wasChal.s-score)+'.'}</p>`:'';
