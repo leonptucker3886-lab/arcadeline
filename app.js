@@ -47,7 +47,27 @@ function setChip(m){const c=$('modechip');if(!c)return;c.hidden=!m;c.className='
 function go(v){document.body.classList.toggle('playing',v==='play');for(const s of ['home','play','auth','nick','profile'])$('v-'+s).hidden=s!==v;window.scrollTo(0,0)}
 function renderWho(){$('who').innerHTML=user?`<span class="wh" onclick="openProfile()">${P?avHtml(P.av,P.fr):''}<span class="small">${esc(nick||user.email)}</span>${P?`<span class="tk">🪙${P.tokens}</span>`:''}</span> <button class="ghost" onclick="signOut()">Sign out</button>`:`<button onclick="go('auth')">Sign in</button>`}
 
-function renderHome(){const c=(g,tag)=>`<div class="pim"><img src="${g.img}" alt="${esc(g.name)}" loading="lazy"></div><div class="pbd"><h3>${g.name}</h3><p>${g.desc}</p><span class="go">${tag}</span></div>`;$('games').innerHTML=GAMES.map(g=>`<a class="gc" href="#${g.id}" onclick="openGame('${g.id}');return false">${c(g,'Play \u00b7 Leaderboard \u2192')}</a>`).join('')}
+const CATS=[
+ {id:'top',name:'Top Picks',ids:['dailysudoku','maze','blocks','flap','merge','boxing']},
+ {id:'classic',name:'Classic Arcade',ids:['snake','bricks','blocks','maze','flap','swipe']},
+ {id:'action',name:'Action & Sports',ids:['rocks','invaders','squad','linetrap','boxing','streetball']},
+ {id:'puzzle',name:'Puzzle & Brain',ids:['dailysudoku','sudoku','hex','merge','mines']},
+ {id:'board',name:'Board & Strategy',ids:['ludo','dominion']}
+];
+(function(){const m=new Set();CATS.slice(1).forEach(c=>c.ids.forEach(i=>m.add(i)));const rest=GAMES.filter(g=>!m.has(g.id)).map(g=>g.id);if(rest.length)CATS.push({id:'more',name:'More Games',ids:rest})})();
+let LOBBY_CAT='lobby';
+function tileHTML(g){return `<a class="lt" href="#${g.id}" onclick="openGame('${g.id}');return false" aria-label="Play ${esc(g.name)}"><span class="lti"><img src="${g.img}" alt="" loading="lazy"><b class="ltp" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></b></span><span class="ltn">${esc(g.name)}</span></a>`}
+function catGames(c){return c.ids.map(i=>GAMES.find(g=>g.id===i)).filter(Boolean)}
+function renderHome(){
+ const feat=[['dailysudoku','Daily challenge','One puzzle for everyone, every day. Keep your streak alive.'],['maze','Featured','Neon chase. Four glitches. One leaderboard.']];
+ $('lhero').innerHTML=feat.map(([id,k,t])=>{const g=GAMES.find(x=>x.id===id);return g?`<a class="lh" href="#${g.id}" onclick="openGame('${g.id}');return false" style="background-image:linear-gradient(90deg,rgba(11,11,20,.92) 30%,rgba(11,11,20,.2)),url('${g.img}')"><small>${k}</small><strong>${esc(g.name)}</strong><span>${t}</span><em>Play now</em></a>`:''}).join('');
+ $('lchips').innerHTML=[{id:'lobby',name:'Lobby'}].concat(CATS).map(c=>`<button type="button" class="lc${c.id===LOBBY_CAT?' on':''}" onclick="setCat('${c.id}')">${esc(c.name)}</button>`).join('');
+ const q=($('lsearch').value||'').trim().toLowerCase();
+ if(q){const r=GAMES.filter(g=>(g.name+' '+g.desc).toLowerCase().includes(q));$('games').innerHTML=`<div class="lrh"><h2>Results (${r.length})</h2></div>`+(r.length?`<div class="lgrid">${r.map(tileHTML).join('')}</div>`:`<p class="small">No games match "${esc(q)}".</p>`);return}
+ if(LOBBY_CAT!=='lobby'){const c=CATS.find(x=>x.id===LOBBY_CAT),gs=catGames(c);$('games').innerHTML=`<div class="lrh"><h2>${esc(c.name)} (${gs.length})</h2><button type="button" class="lsa" onclick="setCat('lobby')">Back to lobby</button></div><div class="lgrid">${gs.map(tileHTML).join('')}</div>`;return}
+ $('games').innerHTML=CATS.map(c=>{const gs=catGames(c);return `<section class="lrow"><div class="lrh"><h2>${esc(c.name)}</h2><button type="button" class="lsa" onclick="setCat('${c.id}')">See all (${gs.length})</button></div><div class="lscroll">${gs.map(tileHTML).join('')}</div></section>`}).join('')+`<section class="lrow"><div class="lrh"><h2>All games</h2><span class="small">${GAMES.length} games</span></div><div class="lgrid">${GAMES.map(tileHTML).join('')}</div></section>`}
+function setCat(c){LOBBY_CAT=c;$('lsearch').value='';renderHome();const s=$('lbar');if(s&&window.scrollY>s.offsetTop)window.scrollTo({top:s.offsetTop-60,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='lsearch'){if(e.target.value)LOBBY_CAT='lobby';renderHome()}});
 async function loadUser(){const {data}=await sb.auth.getSession();user=data.session?.user||null;nick=null;
  if(user){const {data:p}=await sb.from('arc_profiles').select('*').eq('id',user.id).maybeSingle();nick=p?.nickname||null;P=p?prof(p):null}else P=null;renderWho()}
 function flip(){mode=mode==='in'?'up':'in';$('atitle').textContent=mode==='in'?'Sign in to save scores':'Create a free account';$('abtn').textContent=mode==='in'?'Sign in':'Create account';$('aflip').textContent=mode==='in'?'New here? Create a free account':'Have an account? Sign in';$('amsg').textContent=''}
@@ -124,3 +144,6 @@ async function act(fn,args,ok){const {data,error}=await sb.rpc(fn,args);$('pmsg2
 const buy=id=>act('arc_buy',{p_item:id},'Unlocked! Tap Equip to wear it.'),equip=id=>act('arc_equip',{p_item:id},'Equipped.'),unequip=k=>act('arc_unequip',{p_kind:k},'Removed.');
 const claimDaily=()=>act('arc_daily',{},d=>d.claimed?`+${d.tokens} Glow \u00b7 ${d.streak}-day streak`:'Already claimed today.');
 loadCat().then(loadUser);
+
+// keep the lobby search bar pinned just under the sticky header
+(function(){const f=()=>{const h=document.querySelector('header');if(h)document.documentElement.style.setProperty('--hh',h.offsetHeight+'px')};f();addEventListener('resize',f);addEventListener('load',f)})();
