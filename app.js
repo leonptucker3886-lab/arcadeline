@@ -21,6 +21,7 @@ const GAMES=[
  {id:'merge',img:'https://www.leonlink.net/img/cards/mergeglow.jpg',ic:'',name:'Merge Glow',desc:'Slide and fuse neon tiles. Chain merges in one move for combo multipliers.',hint:'Swipe or arrows / WASD to slide. Fuse equal tiles - reach the 2048 tile, then keep going.'},
  {id:'mines',img:'https://www.leonlink.net/img/cards/minefield.jpg',ic:'',name:'Minefield',desc:'Clear the 9x9 grid. Flag the mines, chord the numbers, beat the clock.',hint:'Tap to reveal, long-press or the FLAG button (or F) to flag. First tap is always safe.'},
  {id:'dominion',img:'https://www.leonlink.net/img/cards/dominion.jpg',ic:'\u265F',name:'Pocket Dominion',desc:'Tiny grand strategy: raise armies, build farms and forts, break pacts, take the map in 20 turns.',hint:'Tap only. Tap your lands to recruit and build, tap a neighbor to attack, tap a rival banner to offer a pact.'},
+ {id:'orbitfall',url:'/orbitfall/',img:'/img/orbitfall.jpg',ic:'',name:'Orbitfall',desc:'Ride three orbits around a dying star. Grab shards, chain combos, skim meteors and dodge plasma arcs.',hint:'Tap to switch orbits.'},
 ];
 let P=null,ITEMS=[],BADGES=[],user=null,nick=null,mode='in',cur=null,after=null;
 const STAKE=25;                 // flat Glow entry per token run (Leon's constitution)
@@ -83,7 +84,7 @@ async function signOut(){await sb.auth.signOut();user=null;nick=null;renderWho()
 async function loadLB(g){const {data}=await sb.from('arc_leaderboard').select('nickname,best,lvl,av,fr,co,ti').eq('game',g).order('best',{ascending:false}).limit(20);
  $('lb').innerHTML=(data||[]).map(r=>`<li class="${r.nickname===nick?'me':''}"><span><span class="lv">Lv${r.lvl}</span>${avHtml(r.av||'🕹️',r.fr)} <span style="${r.co?'color:'+r.co:''}">${esc(r.nickname)}</span>${r.ti?`<span class="ti">${esc(r.ti)}</span>`:''}</span><b>${r.best}</b></li>`).join('')||'<li class="small">No scores yet. Be the first.</li>';
  if(user){const {data:b}=await sb.from('arc_scores').select('score').eq('game',g).eq('user_id',user.id).order('score',{ascending:false}).limit(1);$('best').textContent=b?.[0]?.score??'–'}else $('best').textContent='–'}
-function openGame(id){cur=GAMES.find(g=>g.id===id);if(!cur)return;runMode=null;history.replaceState(null,'','#'+id);$('gtitle').textContent=cur.name;$('hint').textContent=cur.hint;$('score').textContent=0;go('play');loadLB(id);showStart()}
+function openGame(id){cur=GAMES.find(g=>g.id===id);if(!cur)return;if(cur.url){location.href=cur.url;return}runMode=null;history.replaceState(null,'','#'+id);$('gtitle').textContent=cur.name;$('hint').textContent=cur.hint;$('score').textContent=0;go('play');loadLB(id);showStart()}
 function overlay(html){const o=$('overlay');o.innerHTML=html;o.hidden=!html}
 function showStart(){const signed=!!user;ACT=null;
  const banner=(CHAL&&CHAL.g===cur.id)?`<div class="chb"><b>${esc(CHAL.n)}</b> challenges you: beat <b>${CHAL.s}</b> on ${cur.id==='dailysudoku'?esc("today's board"):esc(cur.name)}.<br><button onclick="acceptChallenge()">Accept \u2014 practice</button></div>`:'';
