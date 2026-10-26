@@ -22,6 +22,7 @@ const GAMES=[
  {id:'mines',img:'https://www.leonlink.net/img/cards/minefield.jpg',ic:'',name:'Minefield',desc:'Clear the 9x9 grid. Flag the mines, chord the numbers, beat the clock.',hint:'Tap to reveal, long-press or the FLAG button (or F) to flag. First tap is always safe.'},
  {id:'dominion',img:'https://www.leonlink.net/img/cards/dominion.jpg',ic:'\u265F',name:'Pocket Dominion',desc:'Tiny grand strategy: raise armies, build farms and forts, break pacts, take the map in 20 turns.',hint:'Tap only. Tap your lands to recruit and build, tap a neighbor to attack, tap a rival banner to offer a pact.'},
  {id:'orbitfall',url:'/orbitfall/',img:'/img/orbitfall.jpg',ic:'',name:'Orbitfall',desc:'Ride three orbits around a dying star. Grab shards, chain combos, skim meteors and dodge plasma arcs.',hint:'Tap to switch orbits.'},
+ {id:'savagecircuit',url:'https://savage-circuit.vercel.app',img:'/img/savage-circuit.jpg',ic:'',name:'Savage Circuit',desc:'Fighter, one-button horde brawler and a 45+ minute turn-based lane RPG campaign: 15 battles, 6 bosses and one last match.',hint:'Tap or use the on-screen pad. TACTICS mode is the full campaign.'},
 ];
 let P=null,ITEMS=[],BADGES=[],user=null,nick=null,mode='in',cur=null,after=null;
 const STAKE=25;                 // flat Glow entry per token run (Leon's constitution)
